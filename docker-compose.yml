@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=dev
+      - DATABASE_URL=sqlite:///./trading_agent.db
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    volumes:
+      - ./app:/app/app
+      - ./config:/app/config
+      - trading_data:/app/data
+    depends_on:
+      - mlflow
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  ui:
+    build: .
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://api:8000
+    volumes:
+      - ./ui:/app/ui
+    depends_on:
+      - api
+    command: streamlit run ui/dashboard.py --server.port 8501 --server.address 0.0.0.0
+
+  mlflow:
+    image: python:3.11-slim
+    ports:
+      - "5000:5000"
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=sqlite:///mlflow.db
+      - MLFLOW_ARTIFACT_ROOT=/mlflow/artifacts
+    volumes:
+      - mlflow_data:/mlflow
+    command: >
+      sh -c "pip install mlflow &&
+             mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///mlflow.db --default-artifact-root /mlflow/artifacts"
+
+volumes:
+  trading_data:
+  mlflow_data:

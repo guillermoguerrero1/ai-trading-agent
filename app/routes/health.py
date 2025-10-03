@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from app.deps import get_settings
 from app.models.base import Settings
 
-router = APIRouter(prefix="/v1/health", tags=["health"])
+router = APIRouter(prefix="/health", tags=["health"])
 
 
 @router.get("/")
@@ -22,9 +22,9 @@ async def health_check(settings: Settings = Depends(get_settings)):
     return {
         "status": "healthy",
         "service": "ai-trading-agent",
-        "version": settings.app_version,
-        "environment": "dev" if settings.debug else "prod",
-        "timezone": settings.timezone,
+        "version": "0.1.0",
+        "environment": settings.ENVIRONMENT,
+        "timezone": settings.TZ,
     }
 
 

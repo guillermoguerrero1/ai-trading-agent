@@ -7,7 +7,7 @@ import random
 from collections import defaultdict
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Dict, Any, List, AsyncGenerator, Callable
+from typing import Dict, Any, List, AsyncGenerator, Callable, Optional
 
 from .base import (
     IBroker, OrderRequest, OrderResponse, Position, Account, StatusUpdate,
@@ -41,16 +41,18 @@ price_bus = _PriceBus()
 class PaperBroker(IBroker):
     """Paper trading broker implementation."""
     
-    def __init__(self, initial_capital: Decimal = Decimal("100000.0")):
+    def __init__(self, initial_capital: Decimal = Decimal("100000.0"), trade_logger: Optional["TradeLogger"] = None):
         """
         Initialize paper broker.
         
         Args:
             initial_capital: Initial capital amount
+            trade_logger: Optional TradeLogger instance for logging trades
         """
         self.initial_capital = initial_capital
         self.connected = False
         self.account_id = "paper-account-001"
+        self.trade_logger = trade_logger
         
         # Simulated state
         self.positions: Dict[str, Position] = {}
@@ -145,6 +147,20 @@ class PaperBroker(IBroker):
         # Store order
         self.orders[order_id] = order_response
         
+        # Log trade opening if trade_logger is available
+        if self.trade_logger:
+            await self.trade_logger.log_open(
+                order_id=order_id,
+                symbol=order_request.symbol,
+                side=order_request.side.value,
+                qty=float(order_request.quantity),
+                entry=float(order_request.price) if order_request.price else float(self.market_prices.get(order_request.symbol, Decimal("100.00"))),
+                stop=float(order_request.stop_price) if order_request.stop_price else None,
+                target=None,  # PaperBroker doesn't have explicit target in OrderRequest
+                features=order_request.metadata,
+                notes="paper.open",
+            )
+        
         # Simulate order execution
         await self._simulate_order_execution(order_response)
         
@@ -220,6 +236,24 @@ class PaperBroker(IBroker):
         
         # Update account
         await self._update_account(order_response, execution_price)
+        
+        # Log trade closing if trade_logger is available
+        # Note: This logs when the order is filled, which for paper trading is the close
+        # In a real scenario with stop/target OCO orders, this would be called when those are hit
+        if self.trade_logger:
+            # Determine outcome based on order type/metadata
+            outcome = "fill"
+            if hasattr(order_response, 'metadata') and order_response.metadata:
+                if order_response.metadata.get('is_stop'):
+                    outcome = "stop"
+                elif order_response.metadata.get('is_target'):
+                    outcome = "target"
+            
+            await self.trade_logger.log_close(
+                order_id=order_response.order_id,
+                exit_price=float(execution_price),
+                outcome=outcome,
+            )
         
         # Send status update
         await self._send_status_update(StatusUpdate(
@@ -309,6 +343,14 @@ class PaperBroker(IBroker):
         order.status = OrderStatus.CANCELLED
         order.cancelled_at = datetime.utcnow()
         order.updated_at = datetime.utcnow()
+        
+        # Log trade closing with manual_exit outcome if trade_logger is available
+        if self.trade_logger:
+            await self.trade_logger.log_close(
+                order_id=order_id,
+                exit_price=float(self.market_prices.get(order.symbol, Decimal("100.00"))),
+                outcome="cancelled",
+            )
         
         # Send status update
         await self._send_status_update(StatusUpdate(

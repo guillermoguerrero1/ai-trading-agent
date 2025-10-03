@@ -216,3 +216,39 @@ class TestConfigurationIntegration:
         assert updated_limits.daily_loss_cap_usd == Decimal("500.0")
         assert updated_limits.max_contracts == 10  # Unchanged
         assert updated_limits.session_windows == ["09:30-16:00"]  # Unchanged
+
+
+def test_cme_provider_session_windows(monkeypatch):
+    """Test that when SESSION_PROVIDER=cme and SESSION_WINDOWS unset, session_windows_normalized is not empty and each item matches HH:MM-HH:MM."""
+    # Set SESSION_PROVIDER to cme and unset SESSION_WINDOWS
+    s = _reload_settings(monkeypatch, {
+        "SESSION_PROVIDER": "cme",
+        "SESSION_WINDOWS": None,
+        "TZ": "America/New_York"
+    })
+    
+    # Get session windows
+    session_windows = s.session_windows_normalized
+    
+    # Assert session windows is not empty
+    assert len(session_windows) > 0, "Session windows should not be empty when SESSION_PROVIDER=cme"
+    
+    # Assert each item matches HH:MM-HH:MM format
+    import re
+    time_pattern = re.compile(r'^\d{2}:\d{2}-\d{2}:\d{2}$')
+    
+    for window in session_windows:
+        assert time_pattern.match(window), f"Session window '{window}' does not match HH:MM-HH:MM format"
+        
+        # Additional validation: ensure times are valid
+        try:
+            start_str, end_str = window.split('-')
+            from datetime import time
+            time.fromisoformat(start_str)
+            time.fromisoformat(end_str)
+        except (ValueError, IndexError) as e:
+            pytest.fail(f"Invalid time format in session window '{window}': {e}")
+    
+    # Verify we get CME-specific windows (should include extended hours)
+    # CME typically has multiple windows including overnight sessions
+    assert len(session_windows) >= 2, "CME should have multiple session windows"

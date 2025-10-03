@@ -1,5 +1,7 @@
 # AI Trading Agent
 
+⚠️ **Scope**: This repo is a base scaffold (paper trading, risk guard, API, UI). It intentionally contains **no strategy logic** and **no default live trading**. Any new features must follow CONTRIBUTING.md and RFCs.md before implementation.
+
 A production-ready AI Trading Agent built with FastAPI, Streamlit, and MLflow. Features comprehensive risk management, multiple broker support, and real-time monitoring.
 
 ## 🚀 Quickstart
@@ -128,6 +130,17 @@ curl -X PUT http://localhost:8000/v1/config/ \
   }'
 ```
 
+### Logs API
+- List recent trades:
+```bash
+curl -s "http://localhost:8000/v1/logs/trades?limit=10" | jq
+```
+
+- Debug mounted routes:
+```bash
+curl -s http://localhost:8000/v1/debug/routes | jq
+```
+
 ## 🧠 Strategy Integration
 
 ### Where to Plug in Your Strategy
@@ -240,6 +253,8 @@ SESSION_WINDOWS=06:30-08:00,08:30-10:00
 - **Orders**: `/v1/orders/`
 - **P&L**: `/v1/pnl/daily`
 - **Signals**: `/v1/signal/`
+- **Logs**: `/v1/logs/trades`
+- **Debug**: `/v1/debug/routes`
 
 ## 🔧 Configuration
 

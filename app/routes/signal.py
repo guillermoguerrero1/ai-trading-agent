@@ -12,7 +12,7 @@ from app.models.order import OrderRequest, OrderSide, OrderType
 from app.services.risk_guard import RiskGuard
 from app.services.supervisor import Supervisor
 
-router = APIRouter(prefix="/v1/signal", tags=["signal"])
+router = APIRouter(prefix="/signal", tags=["signal"])
 
 
 class SignalRequest:

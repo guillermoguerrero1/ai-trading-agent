@@ -2,23 +2,28 @@
 Order management routes
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import JSONResponse
 from typing import List, Optional
 from uuid import UUID
 
-from app.deps import get_settings, get_supervisor
+from app.deps import get_settings, get_supervisor, get_trade_logger
 from app.models.base import Settings
 from app.models.order import OrderRequest, OrderResponse, OrderFilter
 from app.models.event import Event, EventType, EventSeverity
 from app.services.supervisor import Supervisor
 
-router = APIRouter(prefix="/v1/orders", tags=["orders"])
+import structlog
+
+logger = structlog.get_logger(__name__)
+
+router = APIRouter(prefix="/orders", tags=["orders"])
 
 
 @router.post("/", response_model=OrderResponse)
 async def create_order(
     order_request: OrderRequest,
+    request: Request,
     settings: Settings = Depends(get_settings),
     supervisor: Supervisor = Depends(get_supervisor)
 ):
@@ -54,6 +59,32 @@ async def create_order(
                 source="order_api"
             )
         )
+        
+        # Log trade opening as backup (in case broker doesn't have TradeLogger)
+        # capture optional features from request body if present
+        features = order_request.dict().get("features") if hasattr(order_request, "dict") else None
+        try:
+            # Access TradeLogger directly from app state
+            trade_logger = getattr(request.app.state, "trade_logger", None)
+            if trade_logger:
+                await trade_logger.log_open(
+                    order_id=order_response.order_id,
+                    symbol=order_request.symbol,
+                    side=order_request.side.value,
+                    qty=float(order_request.quantity),
+                    entry=float(order_request.price) if order_request.price else 0.0,
+                    stop=float(order_request.stop_price) if order_request.stop_price else None,
+                    target=None,  # OrderRequest doesn't have target field
+                    features=features,
+                    notes="orders.route.open",
+                )
+                logger.info("Trade logged successfully from orders route", order_id=order_response.order_id)
+            else:
+                logger.warning("TradeLogger not available in app state", order_id=order_response.order_id)
+        except Exception as e:
+            # don't fail the API on logging error
+            logger.error("Failed to log trade from orders route", error=str(e), order_id=order_response.order_id)
+            pass
         
         return order_response
         

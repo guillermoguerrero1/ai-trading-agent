@@ -14,7 +14,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 
 from app.deps import get_settings
 from app.store.db import create_tables
-from app.routes import health, config, signal, orders, pnl, debug
+from app.routes import health, config, signal, orders, pnl, debug, trade_logs, debug_routes
 try:
     from app.routes import tick  # optional, only if file exists
     HAS_TICK = True
@@ -42,8 +42,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.risk_guard = risk_guard
     supervisor = Supervisor(risk_guard)
     app.state.supervisor = supervisor
+    
+    # Update risk guard with supervisor reference for runtime config
+    risk_guard.supervisor = supervisor
     queue_service = QueueService()
     app.state.queue_service = queue_service
+    
+    from app.services.trade_logger import TradeLogger
+    trade_logger = TradeLogger()
+    app.state.trade_logger = trade_logger
 
     # Log effective settings snapshot
     logger.info(
@@ -106,6 +113,8 @@ def create_app() -> FastAPI:
     app.include_router(orders.router, prefix="/v1", tags=["orders"])
     app.include_router(pnl.router,    prefix="/v1", tags=["pnl"])
     app.include_router(debug.router, prefix="/v1", tags=["debug"])
+    app.include_router(debug_routes.router, prefix="/v1", tags=["debug"])
+    app.include_router(trade_logs.router, prefix="/v1", tags=["logs"])
     if HAS_TICK:
         app.include_router(tick.router, prefix="/v1", tags=["tick"])
 

@@ -404,3 +404,9 @@ class TestRootEndpoints:
         data = response.json()
         assert data["status"] == "healthy"
         assert data["service"] == "ai-trading-agent"
+
+
+def test_logs_route_available(client):
+    """Test that trade logs route is available and returns valid response."""
+    r = client.get("/v1/logs/trades?limit=1")
+    assert r.status_code in (200, 204), r.text

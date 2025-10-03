@@ -2,140 +2,94 @@
 Configuration routes
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import JSONResponse
+from typing import Optional, List
 
-from app.deps import get_settings
+from app.deps import get_settings, get_supervisor
 from app.models.base import Settings
-from app.models.limits import GuardrailLimits, GuardrailUpdate
+from app.models.limits import GuardrailLimits, GuardrailUpdate, ConfigUpdate
+from app.services.supervisor import Supervisor
 
-router = APIRouter(prefix="/v1/config", tags=["config"])
+router = APIRouter(prefix="/config", tags=["config"])
 
 
 @router.get("/")
-async def get_config(settings: Settings = Depends(get_settings)):
+async def get_config(
+    request: Request,
+    settings: Settings = Depends(get_settings),
+    supervisor: Supervisor = Depends(get_supervisor)
+):
     """
-    Get current configuration.
+    Get current configuration including effective session windows and runtime toggles.
     
     Returns:
-        Current configuration settings
+        Current configuration settings with effective values
     """
+    try:
+        # Get effective session windows and ignore_session from supervisor
+        effective_session_windows = supervisor.get_effective_session_windows(settings)
+        effective_ignore_session = supervisor.get_effective_ignore_session()
+    except Exception as e:
+        return {"error": f"Supervisor error: {str(e)}", "type": type(e).__name__}
+    
     return {
-        "app": {
-            "name": settings.app_name,
-            "version": settings.app_version,
-            "debug": settings.debug,
-            "timezone": settings.timezone,
+        "session_windows": {
+            "configured": settings.session_windows_normalized,
+            "effective": effective_session_windows,
+            "runtime_override": supervisor.runtime_session_windows,
         },
-        "api": {
-            "host": settings.api_host,
-            "port": settings.api_port,
-            "workers": settings.api_workers,
+        "ignore_session": {
+            "effective": effective_ignore_session,
+            "runtime_override": supervisor.runtime_ignore_session,
         },
-        "trading": {
-            "default_broker": settings.default_broker,
-            "initial_capital": float(settings.initial_capital),
-            "commission_rate": float(settings.commission_rate),
-        },
-        "guardrails": {
-            "max_trades_per_day": settings.max_trades_per_day,
-            "daily_loss_cap_usd": float(settings.daily_loss_cap_usd),
-            "max_contracts": settings.max_contracts,
-            "max_position_size_usd": float(settings.max_position_size_usd),
-            "max_daily_volume_usd": float(settings.max_daily_volume_usd),
-            "session_windows": settings.session_windows,
-        },
-        "risk": {
-            "check_interval": settings.risk_check_interval,
-            "violation_cooldown": settings.violation_cooldown,
-            "auto_halt_on_critical": settings.auto_halt_on_critical,
-        },
-        "logging": {
-            "level": settings.log_level,
-            "format": settings.log_format,
-        },
+        "broker": settings.BROKER,
+        "timezone": settings.TZ,
+        "session_provider": settings.SESSION_PROVIDER,
     }
 
 
 @router.put("/")
 async def update_config(
-    config_update: GuardrailUpdate,
-    settings: Settings = Depends(get_settings)
+    config_update: ConfigUpdate,
+    request: Request,
+    settings: Settings = Depends(get_settings),
+    supervisor: Supervisor = Depends(get_supervisor)
 ):
     """
-    Update configuration.
+    Update runtime configuration for session windows and bypass flags.
     
     Args:
-        config_update: Configuration update request
+        config_update: Configuration update request with session_windows and ignore_session
         
     Returns:
-        Updated configuration
+        Updated configuration status
     """
-    # TODO: Implement configuration persistence
-    # For now, just return the update request
-    
-    updated_config = {
-        "max_trades_per_day": config_update.max_trades_per_day or settings.max_trades_per_day,
-        "daily_loss_cap_usd": float(config_update.daily_loss_cap_usd or settings.daily_loss_cap_usd),
-        "max_contracts": config_update.max_contracts or settings.max_contracts,
-        "max_position_size_usd": float(config_update.max_position_size_usd or settings.max_position_size_usd),
-        "max_daily_volume_usd": float(config_update.max_daily_volume_usd or settings.max_daily_volume_usd),
-        "session_windows": config_update.session_windows or settings.session_windows,
-    }
-    
-    return {
-        "message": "Configuration updated successfully",
-        "config": updated_config,
-    }
-
-
-@router.get("/guardrails")
-async def get_guardrails(settings: Settings = Depends(get_settings)):
-    """
-    Get current guardrail limits.
-    
-    Returns:
-        Current guardrail limits
-    """
-    limits = GuardrailLimits(
-        max_trades_per_day=settings.max_trades_per_day,
-        daily_loss_cap_usd=settings.daily_loss_cap_usd,
-        max_contracts=settings.max_contracts,
-        max_position_size_usd=settings.max_position_size_usd,
-        max_daily_volume_usd=settings.max_daily_volume_usd,
-        session_windows=settings.session_windows,
-    )
-    
-    return limits
-
-
-@router.put("/guardrails")
-async def update_guardrails(
-    guardrail_update: GuardrailUpdate,
-    settings: Settings = Depends(get_settings)
-):
-    """
-    Update guardrail limits.
-    
-    Args:
-        guardrail_update: Guardrail update request
+    try:
+        # Update supervisor runtime configuration
+        await supervisor.update_runtime_config(
+            session_windows=config_update.session_windows,
+            ignore_session=config_update.ignore_session
+        )
         
-    Returns:
-        Updated guardrail limits
-    """
-    # TODO: Implement guardrail persistence and validation
-    # For now, just return the update request
-    
-    updated_limits = GuardrailLimits(
-        max_trades_per_day=guardrail_update.max_trades_per_day or settings.max_trades_per_day,
-        daily_loss_cap_usd=guardrail_update.daily_loss_cap_usd or settings.daily_loss_cap_usd,
-        max_contracts=guardrail_update.max_contracts or settings.max_contracts,
-        max_position_size_usd=guardrail_update.max_position_size_usd or settings.max_position_size_usd,
-        max_daily_volume_usd=guardrail_update.max_daily_volume_usd or settings.max_daily_volume_usd,
-        session_windows=guardrail_update.session_windows or settings.session_windows,
-    )
-    
-    return {
-        "message": "Guardrails updated successfully",
-        "limits": updated_limits,
-    }
+        # Get effective values after update
+        effective_session_windows = supervisor.get_effective_session_windows(settings)
+        effective_ignore_session = supervisor.get_effective_ignore_session()
+        
+        return {
+            "message": "Runtime configuration updated successfully",
+            "session_windows": {
+                "configured": settings.session_windows_normalized,
+                "effective": effective_session_windows,
+                "runtime_override": supervisor.runtime_session_windows,
+            },
+            "ignore_session": {
+                "effective": effective_ignore_session,
+                "runtime_override": supervisor.runtime_ignore_session,
+            },
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Configuration update failed: {str(e)}")
+
+

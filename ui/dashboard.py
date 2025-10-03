@@ -5,6 +5,8 @@ Streamlit trading dashboard
 import streamlit as st
 import asyncio
 import httpx
+import requests
+import pandas as pd
 from datetime import datetime, date
 from typing import Dict, Any, List
 import json
@@ -172,6 +174,19 @@ def show_overview():
     with col3:
         if st.button("⚙️ Settings", use_container_width=True):
             st.switch_page("Settings")
+    
+    # Recent trades section
+    st.markdown("### Recent Trades")
+    try:
+        data = requests.get(f"{API_BASE_URL}/v1/logs/trades?limit=20", timeout=5).json()
+        if isinstance(data, list) and data:
+            df = pd.DataFrame(data)
+            cols = ["created_at","symbol","side","qty","entry_price","exit_price","pnl_usd","r_multiple","outcome"]
+            st.dataframe(df[[c for c in cols if c in df.columns]])
+        else:
+            st.write("No trades yet.")
+    except Exception:
+        st.write("Could not load trades.")
 
 
 def show_pnl():

@@ -27,6 +27,7 @@ class EventType(str, Enum):
 
 class EventSeverity(str, Enum):
     """Event severity levels."""
+    INFO = "INFO"
     LOW = "LOW"
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"

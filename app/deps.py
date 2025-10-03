@@ -40,3 +40,9 @@ def get_queue_service(request: Request) -> "QueueService":
     if svc is None:
         raise HTTPException(status_code=503, detail="QueueService not initialized")
     return svc
+
+def get_trade_logger(request: Request) -> "TradeLogger":
+    svc = getattr(request.app.state, "trade_logger", None)
+    if svc is None:
+        raise HTTPException(status_code=503, detail="TradeLogger not initialized")
+    return svc

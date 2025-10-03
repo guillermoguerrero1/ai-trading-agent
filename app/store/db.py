@@ -44,9 +44,9 @@ def create_engine(settings: Settings = None):
         
         _engine = create_async_engine(
             database_url,
-            echo=settings.database_echo,
-            pool_size=settings.database_pool_size,
-            max_overflow=settings.database_max_overflow,
+            echo=settings.DATABASE_ECHO,
+            pool_size=settings.DATABASE_POOL_SIZE,
+            max_overflow=settings.DATABASE_MAX_OVERFLOW,
         )
         
         logger.info("Database engine created", url=database_url)
@@ -117,6 +117,7 @@ async def create_tables(settings: Settings = None):
         from app.models.account import AccountState, PositionState
         from app.models.pnl import PnL
         from app.models.limits import GuardrailViolation
+        from app.models.trade_log import TradeLog  # noqa
         
         # Create all tables
         await conn.run_sync(SQLModel.metadata.create_all)

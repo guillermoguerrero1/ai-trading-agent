@@ -12,7 +12,7 @@ from app.models.base import Settings
 from app.models.pnl import PnL, PnLSummary, PnLFilter
 from app.services.supervisor import Supervisor
 
-router = APIRouter(prefix="/v1/pnl", tags=["pnl"])
+router = APIRouter(prefix="/pnl", tags=["pnl"])
 
 
 @router.get("/daily")

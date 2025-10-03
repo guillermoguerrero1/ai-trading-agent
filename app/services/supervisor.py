@@ -45,6 +45,10 @@ class Supervisor:
         self.account: Optional[Account] = None
         self.daily_pnl: Dict[date, PnL] = {}
         
+        # Runtime configuration state
+        self.runtime_session_windows: Optional[List[str]] = None
+        self.runtime_ignore_session: Optional[bool] = None
+        
         # Event storage (in production, this would be a database)
         self.max_events = 1000
         
@@ -467,4 +471,62 @@ class Supervisor:
             "total_events": len(self.events),
             "account_equity": float(self.account.equity) if self.account else 0.0,
             "risk_guard_status": self.risk_guard.get_status(),
+            "runtime_config": {
+                "session_windows": self.runtime_session_windows,
+                "ignore_session": self.runtime_ignore_session,
+            }
         }
+    
+    async def update_runtime_config(self, session_windows: Optional[List[str]] = None, ignore_session: Optional[bool] = None):
+        """
+        Update runtime configuration.
+        
+        Args:
+            session_windows: Optional session windows override
+            ignore_session: Optional session bypass flag
+        """
+        if session_windows is not None:
+            self.runtime_session_windows = session_windows
+            logger.info("Runtime session windows updated", windows=session_windows)
+        
+        if ignore_session is not None:
+            self.runtime_ignore_session = ignore_session
+            logger.info("Runtime ignore_session updated", ignore_session=ignore_session)
+        
+        # Log the configuration change
+        await self.log_event(
+            Event(
+                event_type=EventType.SYSTEM,
+                severity=EventSeverity.INFO,
+                message="Runtime configuration updated",
+                data={
+                    "session_windows": session_windows,
+                    "ignore_session": ignore_session,
+                    "timestamp": datetime.utcnow().isoformat()
+                },
+                source="supervisor"
+            )
+        )
+    
+    def get_effective_session_windows(self, settings) -> List[str]:
+        """
+        Get effective session windows considering runtime overrides.
+        
+        Args:
+            settings: Application settings
+            
+        Returns:
+            Effective session windows
+        """
+        if self.runtime_session_windows is not None:
+            return self.runtime_session_windows
+        return settings.session_windows_normalized
+    
+    def get_effective_ignore_session(self) -> bool:
+        """
+        Get effective ignore_session flag.
+        
+        Returns:
+            True if session checks should be ignored
+        """
+        return self.runtime_ignore_session or False

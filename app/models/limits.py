@@ -136,3 +136,24 @@ class GuardrailUpdate(BaseModel):
         if v is not None and v < 0:
             raise ValueError('Value must be non-negative')
         return v
+
+
+class ConfigUpdate(BaseModel):
+    """Configuration update request for runtime toggles."""
+    
+    session_windows: Optional[List[str]] = Field(default=None, description="Trading session windows in HH:MM-HH:MM format")
+    ignore_session: Optional[bool] = Field(default=None, description="Bypass session window checks")
+    
+    @validator('session_windows')
+    def validate_session_windows(cls, v):
+        """Validate session window format."""
+        if v is not None:
+            for window in v:
+                try:
+                    start_str, end_str = window.split('-')
+                    from datetime import time
+                    time.fromisoformat(start_str)
+                    time.fromisoformat(end_str)
+                except (ValueError, IndexError):
+                    raise ValueError(f"Invalid session window format: {window}. Use HH:MM-HH:MM")
+        return v

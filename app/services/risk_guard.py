@@ -17,8 +17,8 @@ logger = structlog.get_logger(__name__)
 
 
 @dataclass
-class RiskCheckResult:
-    """Risk check result."""
+class RiskDecision:
+    """Risk decision result."""
     allowed: bool
     reason: str
     violation: Optional[GuardrailViolation] = None
@@ -27,21 +27,23 @@ class RiskCheckResult:
 class RiskGuard:
     """Risk guard service for enforcing trading limits."""
     
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, supervisor=None):
         """
         Initialize risk guard.
         
         Args:
             settings: Application settings
+            supervisor: Optional supervisor reference for runtime config
         """
         self.settings = settings
+        self.supervisor = supervisor
         self.limits = GuardrailLimits(
             max_trades_per_day=settings.max_trades_per_day,
             daily_loss_cap_usd=settings.daily_loss_cap_usd,
             max_contracts=settings.max_contracts,
             max_position_size_usd=settings.max_position_size_usd,
             max_daily_volume_usd=settings.max_daily_volume_usd,
-            session_windows=settings.session_windows,
+            session_windows=settings.session_windows_normalized,
         )
         
         # Runtime state
@@ -56,7 +58,7 @@ class RiskGuard:
         # Reset daily counters at midnight
         self._last_reset_date = datetime.now().date()
         
-    async def check_signal(self, signal) -> RiskCheckResult:
+    async def check_signal(self, signal) -> RiskDecision:
         """
         Check if a signal is allowed.
         
@@ -64,29 +66,20 @@ class RiskGuard:
             signal: Signal to check
             
         Returns:
-            Risk check result
+            Risk decision
         """
         try:
             # Reset daily counters if needed
             await self._reset_daily_counters_if_needed()
             
             # Check if trading is allowed during current time
-            if not self._is_trading_session():
-                return RiskCheckResult(
-                    allowed=False,
-                    reason="Trading not allowed outside session windows",
-                    violation=GuardrailViolation(
-                        violation_type="session_window",
-                        severity=ViolationSeverity.WARNING,
-                        message="Trading attempted outside allowed session windows",
-                        current_value=datetime.now().time().strftime("%H:%M"),
-                        limit_value=self.limits.session_windows,
-                    )
-                )
+            session_check = self._check_trading_session()
+            if not session_check.allowed:
+                return session_check
             
             # Check daily trade limit
             if self.daily_trades >= self.limits.max_trades_per_day:
-                return RiskCheckResult(
+                return RiskDecision(
                     allowed=False,
                     reason="Daily trade limit exceeded",
                     violation=GuardrailViolation(
@@ -100,7 +93,7 @@ class RiskGuard:
             
             # Check daily loss cap
             if abs(self.daily_loss) >= self.limits.daily_loss_cap_usd:
-                return RiskCheckResult(
+                return RiskDecision(
                     allowed=False,
                     reason="Daily loss cap exceeded",
                     violation=GuardrailViolation(
@@ -115,7 +108,7 @@ class RiskGuard:
             # Check position size limit
             estimated_value = signal.quantity * (signal.price or 0)
             if estimated_value > self.limits.max_position_size_usd:
-                return RiskCheckResult(
+                return RiskDecision(
                     allowed=False,
                     reason="Position size limit exceeded",
                     violation=GuardrailViolation(
@@ -129,7 +122,7 @@ class RiskGuard:
             
             # Check daily volume limit
             if self.daily_volume + estimated_value > self.limits.max_daily_volume_usd:
-                return RiskCheckResult(
+                return RiskDecision(
                     allowed=False,
                     reason="Daily volume limit exceeded",
                     violation=GuardrailViolation(
@@ -141,16 +134,16 @@ class RiskGuard:
                     )
                 )
             
-            return RiskCheckResult(allowed=True, reason="Signal approved")
+            return RiskDecision(allowed=True, reason="Signal approved")
             
         except Exception as e:
             logger.error("Risk check failed", error=str(e), exc_info=True)
-            return RiskCheckResult(
+            return RiskDecision(
                 allowed=False,
                 reason=f"Risk check error: {str(e)}"
             )
     
-    async def check_order(self, order) -> RiskCheckResult:
+    async def check_order(self, order) -> RiskDecision:
         """
         Check if an order is allowed.
         
@@ -163,28 +156,61 @@ class RiskGuard:
         # For now, use the same logic as signal check
         return await self.check_signal(order)
     
-    def _is_trading_session(self) -> bool:
+    def _check_trading_session(self) -> RiskDecision:
         """
-        Check if current time is within trading session windows.
+        Check if current time is within trading session windows with bypass options.
         
         Returns:
-            True if trading is allowed
+            Risk decision with clear reason
         """
+        # Check for PAPER_ANYTIME bypass
+        if hasattr(self.settings, 'PAPER_ANYTIME') and self.settings.PAPER_ANYTIME and self.settings.BROKER == "paper":
+            return RiskDecision(
+                allowed=True,
+                reason="Paper trading allowed anytime (PAPER_ANYTIME=True)"
+            )
+        
+        # Check for runtime ignore_session bypass from supervisor
+        if self.supervisor and self.supervisor.get_effective_ignore_session():
+            return RiskDecision(
+                allowed=True,
+                reason="Session check bypassed (runtime ignore_session=True)"
+            )
+        
+        # Get effective session windows (runtime override or settings)
+        if self.supervisor:
+            effective_windows = self.supervisor.get_effective_session_windows(self.settings)
+        else:
+            effective_windows = self.settings.session_windows_normalized
+        
         current_time = datetime.now().time()
         
-        for window in self.limits.session_windows:
+        for window in effective_windows:
             try:
                 start_str, end_str = window.split('-')
                 start_time = time.fromisoformat(start_str)
                 end_time = time.fromisoformat(end_str)
                 
                 if start_time <= current_time <= end_time:
-                    return True
+                    return RiskDecision(
+                        allowed=True,
+                        reason=f"Within trading session window: {window}"
+                    )
             except (ValueError, IndexError):
                 logger.warning("Invalid session window format", window=window)
                 continue
         
-        return False
+        return RiskDecision(
+            allowed=False,
+            reason=f"Outside trading session windows: {effective_windows}",
+            violation=GuardrailViolation(
+                violation_type="session_window",
+                severity=ViolationSeverity.WARNING,
+                message="Trading attempted outside allowed session windows",
+                current_value=datetime.now().time().strftime("%H:%M"),
+                limit_value=effective_windows,
+            )
+        )
     
     async def _reset_daily_counters_if_needed(self):
         """Reset daily counters if a new day has started."""
@@ -268,7 +294,7 @@ class RiskGuard:
             "session_start_equity": float(self.session_start_equity),
             "current_equity": float(self.current_equity),
             "equity_change": float(self.current_equity - self.session_start_equity),
-            "trading_session": self._is_trading_session(),
+            "trading_session": self._check_trading_session().allowed,
         }
     
     def is_halted(self) -> bool:

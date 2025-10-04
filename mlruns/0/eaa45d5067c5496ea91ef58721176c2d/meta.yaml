@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/Owner/Trading AI Agent/ai-trading-agent/mlruns/0/eaa45d5067c5496ea91ef58721176c2d/artifacts
+end_time: 1759541153086
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: eaa45d5067c5496ea91ef58721176c2d
+run_name: training_20251003_182552
+run_uuid: eaa45d5067c5496ea91ef58721176c2d
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1759541152964
+status: 4
+tags: []
+user_id: Owner

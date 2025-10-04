@@ -23,7 +23,7 @@ cp .env.example .env
 ```bash
 # Start API server
 make run-api
-# API available at http://localhost:8000
+# API available at http://localhost:9001
 
 # Start Streamlit dashboard (in another terminal)
 make run-ui
@@ -56,20 +56,20 @@ make run-api
 
 Health & config
 ```bash
-curl -s http://localhost:8000/v1/health
-curl -s http://localhost:8000/v1/debug/config | jq
+curl -s http://localhost:9001/v1/health
+curl -s http://localhost:9001/v1/debug/config | jq
 ```
 
 Place a paper bracket
 ```bash
-curl -X POST http://localhost:8000/v1/orders \
+curl -X POST http://localhost:9001/v1/orders \
  -H "Content-Type: application/json" \
  -d '{"symbol":"NQZ5","side":"SELL","qty":1,"entry":17895,"stop":17905,"target":17875,"paper":true}'
 ```
 
 (If tick route exists) Push a price to drive fills
 ```bash
-curl -X POST http://localhost:8000/v1/tick -H "Content-Type: application/json" \
+curl -X POST http://localhost:9001/v1/tick -H "Content-Type: application/json" \
  -d '{"symbol":"NQZ5","price":17894.75}'
 ```
 
@@ -77,12 +77,12 @@ curl -X POST http://localhost:8000/v1/tick -H "Content-Type: application/json" \
 
 ### Health Check
 ```bash
-curl http://localhost:8000/v1/health/
+curl http://localhost:9001/v1/health/
 ```
 
 ### Place Order
 ```bash
-curl -X POST http://localhost:8000/v1/orders/ \
+curl -X POST http://localhost:9001/v1/orders/ \
   -H "Content-Type: application/json" \
   -d '{
     "symbol": "AAPL",
@@ -94,7 +94,7 @@ curl -X POST http://localhost:8000/v1/orders/ \
 
 ### Submit Signal
 ```bash
-curl -X POST http://localhost:8000/v1/signal/ \
+curl -X POST http://localhost:9001/v1/signal/ \
   -H "Content-Type: application/json" \
   -d '{
     "signal_type": "BUY",
@@ -111,17 +111,17 @@ curl -X POST http://localhost:8000/v1/signal/ \
 
 ### Get Daily P&L
 ```bash
-curl http://localhost:8000/v1/pnl/daily
+curl http://localhost:9001/v1/pnl/daily
 ```
 
 ### Get Configuration
 ```bash
-curl http://localhost:8000/v1/config/
+curl http://localhost:9001/v1/config/
 ```
 
 ### Update Configuration
 ```bash
-curl -X PUT http://localhost:8000/v1/config/ \
+curl -X PUT http://localhost:9001/v1/config/ \
   -H "Content-Type: application/json" \
   -d '{
     "max_trades_per_day": 10,
@@ -133,12 +133,12 @@ curl -X PUT http://localhost:8000/v1/config/ \
 ### Logs API
 - List recent trades:
 ```bash
-curl -s "http://localhost:8000/v1/logs/trades?limit=10" | jq
+curl -s "http://localhost:9001/v1/logs/trades?limit=10" | jq
 ```
 
 - Debug mounted routes:
 ```bash
-curl -s http://localhost:8000/v1/debug/routes | jq
+curl -s http://localhost:9001/v1/debug/routes | jq
 ```
 
 ## 🧠 Strategy Integration
@@ -258,10 +258,17 @@ SESSION_WINDOWS=06:30-08:00,08:30-10:00
 
 ## 🔧 Configuration
 
+### Port Configuration
+**Canonical API Port: 9001**
+- The API server is standardized to run on port 9001
+- This is the default port for all API endpoints and documentation
+- Use `make cleanup-ports` to free up ports if needed
+
 ### Environment Variables
 ```bash
 # Core settings
 APP_ENV=dev
+API_PORT=9001
 TZ=America/Phoenix
 BROKER=paper
 
@@ -289,13 +296,467 @@ guardrails:
     - "08:30-10:00"
 ```
 
+### Environment-Specific Configuration
+
+The project includes environment-specific configuration files for different deployment scenarios:
+
+#### Available Environments
+
+- **Development** (`.env.dev`): Optimized for development and testing
+- **Production** (`.env.prod`): Optimized for production deployment
+
+#### Running with Specific Environments
+
+```bash
+# Development environment (extended hours, debug logging)
+make run-dev
+
+# Production environment (market hours, optimized performance)
+make run-prod
+
+# Default environment (uses built-in defaults)
+make run-api
+```
+
+#### Key Environment Differences
+
+| Setting | Development (`.env.dev`) | Production (`.env.prod`) | Default |
+|---------|-------------------------|-------------------------|---------|
+| **API Port** | `9001` | `8000` | `9001` |
+| **API Workers** | `1` | `4` | `1` |
+| **Database** | `trading_agent_dev.db` | `trading_agent.db` | `trading_agent.db` |
+| **Database Echo** | `true` (SQL logging) | `false` | `false` |
+| **Log Level** | `DEBUG` | `INFO` | `INFO` |
+| **Debug Mode** | `true` | `false` | `true` |
+| **Max Contracts** | `10` | `5` | `5` |
+| **Max Trades/Day** | `10` | `5` | `5` |
+| **Daily Loss Cap** | `$500` | `$200` | `$300` |
+| **Trading Hours** | `06:00-20:00` (7 days) | `09:30-16:00` (weekdays) | `08:30-15:00` |
+| **Position Limit** | `20%` | `10%` | `10%` |
+
+#### Environment File Selection
+
+The Makefile targets automatically:
+1. **Copy** the appropriate `.env.{environment}` file to `.env`
+2. **Start** the server with environment-specific settings
+3. **Validate** that the environment file exists before starting
+
+#### Custom Environment Files
+
+You can create additional environment files (e.g., `.env.staging`) and use them:
+
+```bash
+# Create custom environment
+cp .env.dev .env.staging
+# Edit .env.staging with staging-specific values
+
+# Run with custom environment
+cp .env.staging .env && uvicorn app.main:app --host 0.0.0.0 --port 9001 --reload
+```
+
+#### Environment Variables Priority
+
+Configuration is loaded in this order:
+1. **Environment variables** (highest priority)
+2. **`.env` file** (copied from `.env.{environment}`)
+3. **Default values** in `app/models/base.py` (lowest priority)
+
+### Prometheus Metrics
+
+The API exposes Prometheus metrics at `/v1/metrics/prom` for monitoring and alerting.
+
+#### Available Metrics
+
+- **`trading_orders_ok_total`**: Successful orders (labeled by symbol, side)
+- **`trading_orders_blocked_total`**: Blocked orders (labeled by symbol, side, reason)
+- **`trading_halts_total`**: Trading halts (labeled by reason)
+- **`trading_model_blocks_total`**: Model blocks (labeled by model_version, reason)
+- **`trading_process_uptime_seconds`**: Process uptime
+- **`trading_process_version_info`**: Version information (labeled by version, environment)
+
+#### Sample Prometheus Configuration
+
+Add this to your `prometheus.yml`:
+
+```yaml
+scrape_configs:
+  - job_name: 'ai-trading-agent'
+    static_configs:
+      - targets: ['localhost:9001']
+    metrics_path: '/v1/metrics/prom'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+```
+
+#### Sample Grafana Dashboard
+
+```json
+{
+  "dashboard": {
+    "title": "AI Trading Agent",
+    "panels": [
+      {
+        "title": "Order Success Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(trading_orders_ok_total[5m]) / (rate(trading_orders_ok_total[5m]) + rate(trading_orders_blocked_total[5m])) * 100"
+          }
+        ]
+      },
+      {
+        "title": "Orders Over Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(trading_orders_ok_total[1m])",
+            "legendFormat": "Successful Orders"
+          },
+          {
+            "expr": "rate(trading_orders_blocked_total[1m])",
+            "legendFormat": "Blocked Orders"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
 ## 🚀 Next Steps
 
-### 1. Add VectorBT Integration
+### 1. MLflow Integration
+
+The training script now includes MLflow integration for experiment tracking and model management:
+
+#### Features:
+- **Experiment Tracking**: All training runs are logged to MLflow
+- **Model Artifacts**: Models are saved as MLflow artifacts
+- **Model Promotion**: Production models can be promoted via API
+- **Fallback Support**: Works with or without MLflow server
+
+#### Usage:
+
+```bash
+# Train with MLflow tracking (default: local file tracking)
+make train
+
+# Train with MLflow server
+MLFLOW_TRACKING_URI=http://localhost:5000 make train
+
+# Promote latest Production model
+curl -X POST http://localhost:9001/v1/model/promote
+```
+
+#### MLflow Configuration:
+
+```bash
+# Set MLflow tracking URI
+export MLFLOW_TRACKING_URI="http://localhost:5000"
+
+# Or use local file tracking (default)
+export MLFLOW_TRACKING_URI="file:./mlruns"
+```
+
+#### Model Lifecycle:
+
+1. **Training**: Models are automatically logged to MLflow
+2. **Tagging**: Best models are tagged as "Production"
+3. **Promotion**: Use `/v1/model/promote` to switch to latest Production model
+4. **Fallback**: If MLflow unavailable, falls back to local training
+
+### 2. Backtesting Engine
+
+A comprehensive backtesting engine is now available at `engines/backtest/run.py`:
+
+#### Features:
+- **Historical Data Loading**: Supports CSV and Parquet formats
+- **Technical Indicators**: SMA, RSI, Bollinger Bands, MACD
+- **Signal Generation**: Simple rule-based trading signals
+- **Bracket Trading**: Stop loss and take profit management
+- **Risk Management**: Position sizing, commission, slippage
+- **HTML Reports**: Beautiful interactive reports with charts
+
+#### Usage:
+
+```bash
+# Basic backtesting
+python engines/backtest/run.py data/sample_btc_data.csv
+
+# Custom parameters
+python engines/backtest/run.py data/sample_btc_data.csv \
+    --initial-capital 10000 \
+    --position-size 0.1 \
+    --stop-loss 0.02 \
+    --take-profit 0.04
+
+# Using Makefile (Linux/macOS)
+make backtest DATA_FILE=data/sample_btc_data.csv CAPITAL=5000
+```
+
+#### Sample Data Format:
+
+```csv
+timestamp,open,high,low,close,volume
+2025-09-03 09:00:00,50000.0,50500.0,49500.0,50200.0,1500
+2025-09-03 09:15:00,50200.0,50800.0,50100.0,50700.0,1800
+...
+```
+
+#### Report Features:
+
+- **Performance Metrics**: Win rate, profit factor, Sharpe ratio
+- **Risk Metrics**: Maximum drawdown, average trade duration
+- **Interactive Charts**: Equity curve, drawdown, P&L distribution
+- **Trade History**: Detailed trade-by-trade analysis
+- **Configuration Summary**: All backtest parameters
+
+#### Signal Rules:
+
+**BUY Signals:**
+- Price above SMA 20 and SMA 50
+- RSI between 30 and 70
+- MACD above signal line (bullish crossover)
+
+**SELL Signals:**
+- Price below SMA 20 and SMA 50
+- RSI above 70 or below 30
+- MACD below signal line (bearish crossover)
+
+### 3. Interactive Brokers (IBKR) Integration
+
+The AI Trading Agent now includes a comprehensive IBKR adapter with paper-compatible interface:
+
+#### Features:
+- **Environment Gating**: Only enabled when `BROKER=ibkr`
+- **Stub Mode**: Logs trading intents when no credentials provided
+- **Health Monitoring**: Dedicated health check endpoints
+- **Paper-Compatible**: Same interface as paper broker
+- **Graceful Degradation**: Falls back to paper broker when disabled
+
+#### Configuration:
+
+```bash
+# Enable IBKR broker
+export BROKER=ibkr
+
+# IBKR connection settings
+export IBKR_HOST=127.0.0.1
+export IBKR_PORT=7497
+export IBKR_CLIENT_ID=1
+export IBKR_ACCOUNT=DU123456  # Required for full functionality
+```
+
+#### Usage:
+
+```bash
+# Check IBKR broker health
+curl http://localhost:9001/v1/broker/ibkr/health
+
+# Check all broker health
+curl http://localhost:9001/v1/broker/health
+
+# Enable IBKR and start server
+BROKER=ibkr uvicorn app.main:app --host 0.0.0.0 --port 9001 --reload
+```
+
+#### Health Check Response:
+
+```json
+{
+  "status": "healthy",
+  "message": "IBKR broker is connected and authenticated",
+  "broker": "ibkr",
+  "enabled": true,
+  "connected": true,
+  "authenticated": true,
+  "credentials_provided": true,
+  "host": "127.0.0.1",
+  "port": 7497,
+  "client_id": 1,
+  "account": "DU123456",
+  "orders_count": 0,
+  "positions_count": 0
+}
+```
+
+#### Stub Mode:
+
+When `BROKER=ibkr` but no credentials are provided:
+- Adapter logs trading intents instead of executing
+- Orders marked as `PENDING` status
+- Useful for testing trading logic without live connection
+
+#### Implementation Status:
+
+- ✅ **Environment Gating**: Only active when `BROKER=ibkr`
+- ✅ **Health Checks**: Dedicated endpoints for monitoring
+- ✅ **Stub Methods**: Logs intents when no credentials
+- ✅ **Paper-Compatible**: Same interface as paper broker
+- ✅ **Error Handling**: Graceful fallbacks and error messages
+- 🔄 **Full Integration**: Ready for IBKR API integration
+
+### 4. JWT Authentication
+
+The AI Trading Agent now includes comprehensive JWT-based authentication for securing write endpoints:
+
+#### Features:
+- **JWT Validation**: HS256 algorithm with configurable secret
+- **Token Validation**: Expiration, not-before, audience, and issuer validation
+- **Endpoint Protection**: Write operations require authentication
+- **User Context**: Extracted user information available in endpoints
+- **Security**: Proper error handling and logging
+
+#### Configuration:
+
+```bash
+# JWT settings (add to .env)
+export JWT_SECRET="your-secret-key-change-in-production"
+export JWT_ALGORITHM="HS256"
+export JWT_AUDIENCE="ai-trading-agent"
+export JWT_ISSUER="ai-trading-agent"
+export JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
+```
+
+#### Token Creation:
+
+```bash
+# Create a JWT token
+python scripts/create_jwt_token.py trader1 --roles trader admin --expires 60
+
+# Create token with custom user ID
+python scripts/create_jwt_token.py alice --user-id user-123 --roles trader
+
+# Save token to file
+python scripts/create_jwt_token.py bob --output token.txt
+```
+
+#### Protected Endpoints:
+
+**Orders:**
+- `POST /v1/orders/` - Create order (requires auth)
+- `DELETE /v1/orders/{order_id}` - Cancel order (requires auth)
+
+**Configuration:**
+- `PUT /v1/config/` - Update configuration (requires auth)
+
+**Model Control:**
+- `POST /v1/model/reload` - Reload model (requires auth)
+- `PUT /v1/model/threshold` - Update threshold (requires auth)
+- `POST /v1/model/promote` - Promote model (requires auth)
+
+#### Usage Examples:
+
+```bash
+# Get a token
+TOKEN=$(python scripts/create_jwt_token.py trader1)
+
+# Make authenticated requests
+curl -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     -X POST http://localhost:9001/v1/orders/ \
+     -d '{"symbol": "AAPL", "side": "BUY", "quantity": 100, "order_type": "MARKET"}'
+
+# Update configuration
+curl -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     -X PUT http://localhost:9001/v1/config/ \
+     -d '{"session_windows": {"start": "09:30", "end": "16:00"}}'
+
+# Reload model
+curl -H "Authorization: Bearer $TOKEN" \
+     -X POST http://localhost:9001/v1/model/reload
+```
+
+#### Token Structure:
+
+```json
+{
+  "sub": "trader1",
+  "username": "trader1", 
+  "roles": ["trader", "admin"],
+  "iat": 1696368000,
+  "exp": 1696369800,
+  "nbf": 1696368000,
+  "aud": "ai-trading-agent",
+  "iss": "ai-trading-agent"
+}
+```
+
+#### Security Notes:
+
+- **Change Default Secret**: Update `JWT_SECRET` in production
+- **Token Expiration**: Tokens expire after 30 minutes by default
+- **Role-Based Access**: User roles available in endpoint context
+- **Audit Logging**: All authentication events are logged
+- **Error Handling**: Proper HTTP status codes for auth failures
+
+### 5. Enhanced Makefile Targets
+
+The AI Trading Agent now includes comprehensive Makefile targets for system management and monitoring:
+
+#### **System Validation:**
+```bash
+# Complete system check (recommended for production readiness)
+make full-check
+# Runs: reset -> health -> routes -> smoke -> dataset -> train -> model-status
+
+# Smoke tests (quick validation)
+make smoke
+# Runs: open-trading + test-order + test-logs
+```
+
+#### **Log Monitoring:**
+```bash
+# Monitor API server logs
+make logs-api
+# Tails logs/api.log or logs/app.log
+
+# Monitor Streamlit UI logs  
+make logs-ui
+# Tails logs/ui.log or logs/streamlit.log
+```
+
+#### **Individual Components:**
+```bash
+# System health
+make health          # Check API health status
+make routes          # List all API routes
+
+# Testing
+make open-trading    # Open trading hours for testing
+make test-order      # Test paper order placement
+make test-logs       # Test trade logs endpoints
+
+# Data & ML
+make dataset         # Build dataset from trade logs
+make train           # Train baseline model
+make model-status    # Check model status and metrics
+
+# System management
+make reset           # Complete system reset
+make cleanup-ports   # Kill processes on ports 9001, 9012, 9014
+```
+
+#### **Full System Check Workflow:**
+
+The `make full-check` target provides a comprehensive validation sequence:
+
+1. **System Reset** - Clean slate with fresh database
+2. **Health Check** - Verify API endpoints are responding
+3. **Routes Check** - Confirm all API routes are available
+4. **Smoke Tests** - Validate core trading functionality
+5. **Dataset Building** - Process trade logs into training data
+6. **Model Training** - Train ML model with latest data
+7. **Model Status** - Verify model is ready for production
+
+This ensures the entire system is operational and ready for live trading.
+
+### 6. Add VectorBT Integration
 ```python
-# For backtesting and analysis
+# For advanced backtesting and analysis
 pip install vectorbt
-# Integrate with app/services/backtesting.py
+# Integrate with engines/backtest/run.py
 ```
 
 ### 2. Add Optuna for Hyperparameter Optimization
@@ -367,9 +828,110 @@ make pre-commit-run
 
 ## 📚 Documentation
 
-- **API Docs**: http://localhost:8000/docs (Swagger UI)
-- **ReDoc**: http://localhost:8000/redoc
-- **OpenAPI Spec**: http://localhost:8000/openapi.json
+- **API Docs**: http://localhost:9001/docs (Swagger UI)
+- **ReDoc**: http://localhost:9001/redoc
+- **OpenAPI Spec**: http://localhost:9001/openapi.json
+
+## 🔧 Stabilization Checklist
+
+Use this checklist to verify the system is working correctly after setup or after making changes.
+
+### Prerequisites
+- API server running on port 9001
+- Database accessible
+- All dependencies installed
+
+### Step-by-Step Verification
+
+#### 1. System Reset
+```bash
+# Clean reset to ensure fresh state
+make reset
+```
+**Expected**: System stops, database resets, services restart cleanly
+
+#### 1.5. Environment Selection (Optional)
+```bash
+# Development environment (recommended for testing)
+make run-dev
+
+# Production environment (for production-like testing)
+make run-prod
+```
+**Expected**: Server starts with appropriate configuration for the environment
+
+#### 2. Health & Routes Check
+```bash
+# Verify API is healthy and routes are registered
+make health
+make routes
+```
+**Expected**: 
+- Health returns `{"status": "healthy", ...}`
+- Routes shows all available endpoints
+
+#### 3. Trading Functionality
+```bash
+# Place a test paper order
+make test-order
+```
+**Expected**: Order placed successfully, fill simulated, order response shows status
+
+#### 4. Logs & Export Verification
+```bash
+# Test trade logs and CSV export
+make test-logs
+```
+**Expected**: Both endpoints return 200 status, CSV contains proper headers
+
+#### 5. Machine Learning Pipeline
+```bash
+# Build dataset and train model
+make dataset
+make train
+```
+**Expected**: Dataset builds successfully, model training completes without errors
+
+#### 6. Model Status Check
+```bash
+# Verify model status and metrics
+make model-status
+```
+**Expected**: Model status shows loaded model, metrics, and configuration
+
+### Success Criteria
+
+✅ **Clean Database**: Fresh schema, no stale data  
+✅ **Single Server**: Only one process on port 9001  
+✅ **Endpoints Healthy**: All API endpoints responding correctly  
+✅ **Trading Working**: Orders can be placed and filled  
+✅ **ML Pipeline Working**: Dataset builds, model trains, status accessible  
+
+### Troubleshooting
+
+If any step fails:
+
+1. **Port Conflicts**: Run `make cleanup-ports` to free up ports
+2. **Database Issues**: Run `make db-clean` to reset database
+3. **API Not Responding**: Check if server is running with `make health`
+4. **Model Issues**: Verify model files exist in `models/` directory
+5. **Trading Hours**: Run `make open-trading` to enable 24/7 trading for testing
+
+### Quick Verification Commands
+
+```bash
+# Full system check (run in sequence)
+make reset && \
+make health && \
+make routes && \
+make test-order && \
+make test-logs && \
+make dataset && \
+make train && \
+make model-status
+
+echo "✅ System stabilization complete!"
+```
 
 ## 🤝 Contributing
 

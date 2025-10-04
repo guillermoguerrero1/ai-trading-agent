@@ -6,12 +6,15 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import JSONResponse
 from typing import List, Optional
 from uuid import UUID
+import hashlib
+import os
 
-from app.deps import get_settings, get_supervisor, get_trade_logger
+from app.deps import get_settings, get_supervisor, get_trade_logger, get_current_user
 from app.models.base import Settings
 from app.models.order import OrderRequest, OrderResponse, OrderFilter
 from app.models.event import Event, EventType, EventSeverity
 from app.services.supervisor import Supervisor
+from agent.infer import allow, score
 
 import structlog
 
@@ -24,6 +27,7 @@ router = APIRouter(prefix="/orders", tags=["orders"])
 async def create_order(
     order_request: OrderRequest,
     request: Request,
+    current_user: dict = Depends(get_current_user),
     settings: Settings = Depends(get_settings),
     supervisor: Supervisor = Depends(get_supervisor)
 ):
@@ -45,6 +49,49 @@ async def create_order(
                 status_code=status.HTTP_423_LOCKED,
                 detail="Trading is currently halted"
             )
+        
+        # Model gate check (optional runtime toggle)
+        require_model_gate = bool(getattr(request.app.state, "require_model_gate", False))
+        if require_model_gate:
+            # Build minimal features from payload (entry/stop/target must exist)
+            entry_price = float(order_request.price) if order_request.price else 0.0
+            stop_price = float(order_request.stop_price) if order_request.stop_price else entry_price
+            target_price = entry_price  # OrderRequest doesn't have target field, use entry as fallback
+            
+            risk = abs(entry_price - stop_price)
+            rr = (abs(target_price - entry_price) / (risk if risk > 0 else 1.0))
+            features = {"risk": risk, "rr": rr}
+            
+            # Get dynamic threshold from app state if available
+            dynamic_threshold = getattr(request.app.state, "model_threshold", None)
+            if not allow(features, threshold=dynamic_threshold):
+                return JSONResponse(
+                    status_code=409, 
+                    content={
+                        "error": "model_gate", 
+                        "score": score(features),
+                        "threshold": dynamic_threshold
+                    }
+                )
+        
+        # Compute model score and version for logging (regardless of gate status)
+        model_path = os.getenv("MODEL_PATH", "models/clf.joblib")
+        model_version = None
+        model_score = None
+        
+        if os.path.exists(model_path):
+            try:
+                with open(model_path, "rb") as f:
+                    model_version = hashlib.md5(f.read()).hexdigest()
+            except Exception:
+                model_version = None
+        
+        # Compute model score if we have features
+        if 'features' in locals() and features:
+            try:
+                model_score = score(features)
+            except Exception:
+                model_score = None
         
         # Submit order through supervisor
         order_response = await supervisor.submit_order(order_request)
@@ -70,13 +117,15 @@ async def create_order(
                 await trade_logger.log_open(
                     order_id=order_response.order_id,
                     symbol=order_request.symbol,
-                    side=order_request.side.value,
+                    side=order_request.side,
                     qty=float(order_request.quantity),
                     entry=float(order_request.price) if order_request.price else 0.0,
                     stop=float(order_request.stop_price) if order_request.stop_price else None,
                     target=None,  # OrderRequest doesn't have target field
                     features=features,
                     notes="orders.route.open",
+                    model_score=model_score,
+                    model_version=model_version,
                 )
                 logger.info("Trade logged successfully from orders route", order_id=order_response.order_id)
             else:
@@ -188,6 +237,7 @@ async def get_order(
 @router.delete("/{order_id}")
 async def cancel_order(
     order_id: str,
+    current_user: dict = Depends(get_current_user),
     supervisor: Supervisor = Depends(get_supervisor)
 ):
     """

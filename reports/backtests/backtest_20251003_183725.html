@@ -1,0 +1,590 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backtest Report - 20251003_183725</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 30px;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            border-left: 4px solid #667eea;
+        }
+        .stat-card.positive {
+            border-left-color: #28a745;
+        }
+        .stat-card.negative {
+            border-left-color: #dc3545;
+        }
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .chart-container {
+            padding: 30px;
+            border-top: 1px solid #eee;
+        }
+        .chart-title {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .chart {
+            height: 400px;
+            margin-bottom: 40px;
+        }
+        .config-section {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            border-top: 1px solid #eee;
+        }
+        .config-title {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .config-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .trades-table {
+            padding: 30px;
+            border-top: 1px solid #eee;
+        }
+        .trades-table h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        .positive {
+            color: #28a745;
+        }
+        .negative {
+            color: #dc3545;
+        }
+        .side-buy {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+        }
+        .side-sell {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Backtest Report</h1>
+            <p>Generated on 2025-10-03 18:37:25</p>
+            <p>Data source: sample_btc_data.csv</p>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card positive">
+                <div class="stat-value">$110.88</div>
+                <div class="stat-label">Total P&L</div>
+            </div>
+            <div class="stat-card positive">
+                <div class="stat-value">2.22%</div>
+                <div class="stat-label">Total Return</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">20</div>
+                <div class="stat-label">Total Trades</div>
+            </div>
+            <div class="stat-card positive">
+                <div class="stat-value">50.00%</div>
+                <div class="stat-label">Win Rate</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">2.88</div>
+                <div class="stat-label">Profit Factor</div>
+            </div>
+            <div class="stat-card positive">
+                <div class="stat-value">0.73%</div>
+                <div class="stat-label">Max Drawdown</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">0.71</div>
+                <div class="stat-label">Sharpe Ratio</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">233</div>
+                <div class="stat-label">Avg Duration (min)</div>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <div class="chart-title">Equity Curve</div>
+            <canvas id="equityChart" class="chart"></canvas>
+            
+            <div class="chart-title">Drawdown</div>
+            <canvas id="drawdownChart" class="chart"></canvas>
+            
+            <div class="chart-title">Trade P&L Distribution</div>
+            <canvas id="pnlChart" class="chart"></canvas>
+        </div>
+        
+        <div class="config-section">
+            <div class="config-title">Backtest Configuration</div>
+            <div class="config-grid">
+                <div class="config-item">
+                    <span>Initial Capital:</span>
+                    <span>$5,000.00</span>
+                </div>
+                <div class="config-item">
+                    <span>Position Size:</span>
+                    <span>5.0%</span>
+                </div>
+                <div class="config-item">
+                    <span>Stop Loss:</span>
+                    <span>2.0%</span>
+                </div>
+                <div class="config-item">
+                    <span>Take Profit:</span>
+                    <span>4.0%</span>
+                </div>
+                <div class="config-item">
+                    <span>Commission:</span>
+                    <span>0.100%</span>
+                </div>
+                <div class="config-item">
+                    <span>Slippage:</span>
+                    <span>0.050%</span>
+                </div>
+                <div class="config-item">
+                    <span>Max Trades/Day:</span>
+                    <span>10</span>
+                </div>
+                <div class="config-item">
+                    <span>Trading Hours:</span>
+                    <span>9:00 - 16:00</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="trades-table">
+            <h3>Trade History (20 trades)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Entry Time</th>
+                        <th>Exit Time</th>
+                        <th>Side</th>
+                        <th>Entry Price</th>
+                        <th>Exit Price</th>
+                        <th>P&L</th>
+                        <th>P&L %</th>
+                        <th>Duration</th>
+                        <th>Exit Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+        
+                    <tr>
+                        <td>2025-09-04 14:21</td>
+                        <td>2025-09-04 15:36</td>
+                        <td><span class="side-buy">BUY</span></td>
+                        <td>$59309.1035</td>
+                        <td>$63123.8046</td>
+                        <td class="positive">$14.76</td>
+                        <td class="positive">6.23%</td>
+                        <td>75 min</td>
+                        <td>TAKE_PROFIT</td>
+                    </tr>
+            
+                    <tr>
+                        <td>2025-09-08 13:21</td>
+                        <td>2025-09-08 14:51</td>
+                        <td><span class="side-buy">BUY</span></td>
+                        <td>$67199.2619</td>
+                        <td>$71239.7567</td>
+                        <td class="positive">$10.98</td>
+                        <td class="positive">5.81%</td>
+                        <td>90 min</td>
+                        <td>TAKE_PROFIT</td>
+                    </tr>
+            
+                    <tr>
+                        <td>2025-09-10 10:06</td>
+                        <td>2025-09-10 12:51</td>
+                        <td><span class="side-buy">BUY</span></td>
+                        <td>$93954.4359</td>
+                        <td>$99746.9354</td>
+                        <td class="positive">$12.48</td>
+                        <td class="positive">5.96%</td>
+                        <td>165 min</td>
+                        <td>TAKE_PROFIT</td>
+                    </tr>
+            
+                    <tr>
+                        <td>2025-09-12 11:36</td>
+                        <td>2025-09-12 11:51</td>
+                        <td><span class="side-buy">BUY</span></td>
+                        <td>$86330.4807</td>
+                        <td>$83895.3642</td>
+                        <td class="negative">$-3.76</td>
+                        <td class="negative">-3.02%</td>
+                        <td>15 min</td>
+                        <td>STOP_LOSS</td>
+                    </tr>
+            
+                    <tr>
+                        <td>2025-09-14 14:36</td>
+                        <td>2025-09-15 09:06</td>
+                        <td><span class="side-buy">BUY</span></td>
+                        <td>$52933.9826</td>
+                        <td>$74142.6049</td>
+                        <td class="positive">$66.04</td>
+                        <td class="positive">39.83%</td>
+                        <td>1110 min</td>
+                        <td>TAKE_PROFIT</td>
+                    </tr>
+            
+                    <tr>
+                        <td>2025-09-15 12:36</td>
+                        <td>2025-09-15 12:51</td>
+                        <td><span class="side-buy">BUY</span></td>
+                        <td>$76338.4556</td>
+                        <td>$80292.9075</td>
+                        <td class="positive">$8.23</td>
+                        <td class="positive">4.97%</td>
+                        <td>15 min</td>
+                        <td>TAKE_PROFIT</td>
+                    </tr>
+            
+                    <tr>
+                        <td>2025-09-17 14:51</td>
+                        <td>2025-09-18 09:06</td>
+                        <td><span class="side-buy">BUY</span></td>
+                        <td>$88249.4939</td>
+                        <td>$98043.6179</td>
+                        <td class="positive">$17.77</td>
+                        <td class="positive">10.89%</td>
+                        <td>1095 min</td>
+                        <td>TAKE_PROFIT</td>
+                    </tr>
+            
+                    <tr>
+                        <td>2025-09-18 10:21</td>
+                        <td>2025-09-18 10:51</td>
+                        <td><span class="side-buy">BUY</span></td>
+                        <td>$99033.9997</td>
+                        <td>$95804.9413</td>
+                        <td class="negative">$-7.50</td>
+                        <td class="negative">-3.46%</td>
+                        <td>30 min</td>
+                        <td>STOP_LOSS</td>
+                    </tr>
+            
+                    <tr>
+                        <td>2025-09-19 10:21</td>
+                        <td>2025-09-19 11:06</td>
+                        <td><span class="side-buy">BUY</span></td>
+                        <td>$109948.6590</td>
+                        <td>$105502.2714</td>
+                        <td class="negative">$-8.94</td>
+                        <td class="negative">-4.24%</td>
+                        <td>45 min</td>
+                        <td>STOP_LOSS</td>
+                    </tr>
+            
+                    <tr>
+                        <td>2025-09-19 13:51</td>
+                        <td>2025-09-19 14:36</td>
+                        <td><span class="side-buy">BUY</span></td>
+                        <td>$108657.0579</td>
+                        <td>$104320.9997</td>
+                        <td class="negative">$-4.30</td>
+                        <td class="negative">-4.19%</td>
+                        <td>45 min</td>
+                        <td>STOP_LOSS</td>
+                    </tr>
+            
+                    <tr>
+                        <td>2025-09-19 15:06</td>
+                        <td>2025-09-19 15:51</td>
+                        <td><span class="side-buy">BUY</span></td>
+                        <td>$109714.2977</td>
+                        <td>$104402.3247</td>
+                        <td class="negative">$-10.70</td>
+                        <td class="negative">-5.04%</td>
+                        <td>45 min</td>
+                        <td>STOP_LOSS</td>
+                    </tr>
+            
+                    <tr>
+                        <td>2025-09-20 13:21</td>
+                        <td>2025-09-20 15:06</td>
+                        <td><span class="side-buy">BUY</span></td>
+                        <td>$113197.6716</td>
+                        <td>$110160.7025</td>
+                        <td class="negative">$-5.51</td>
+                        <td class="negative">-2.88%</td>
+                        <td>105 min</td>
+                        <td>STOP_LOSS</td>
+                    </tr>
+            
+                    <tr>
+                        <td>2025-09-21 15:51</td>
+                        <td>2025-09-22 10:21</td>
+                        <td><span class="side-buy">BUY</span></td>
+                        <td>$131565.1878</td>
+                        <td>$137941.9591</td>
+                        <td class="positive">$8.58</td>
+                        <td class="positive">4.64%</td>
+                        <td>1110 min</td>
+                        <td>TAKE_PROFIT</td>
+                    </tr>
+            
+                    <tr>
+                        <td>2025-09-23 13:36</td>
+                        <td>2025-09-23 14:36</td>
+                        <td><span class="side-sell">SELL</span></td>
+                        <td>$97310.2907</td>
+                        <td>$100242.4773</td>
+                        <td class="negative">$-4.15</td>
+                        <td class="negative">-3.22%</td>
+                        <td>60 min</td>
+                        <td>STOP_LOSS</td>
+                    </tr>
+            
+                    <tr>
+                        <td>2025-09-24 12:21</td>
+                        <td>2025-09-24 13:51</td>
+                        <td><span class="side-buy">BUY</span></td>
+                        <td>$145742.6922</td>
+                        <td>$141551.2518</td>
+                        <td class="negative">$-4.74</td>
+                        <td class="negative">-3.07%</td>
+                        <td>90 min</td>
+                        <td>STOP_LOSS</td>
+                    </tr>
+            
+                    <tr>
+                        <td>2025-09-25 14:21</td>
+                        <td>2025-09-25 15:06</td>
+                        <td><span class="side-buy">BUY</span></td>
+                        <td>$109415.2225</td>
+                        <td>$114218.1293</td>
+                        <td class="positive">$9.83</td>
+                        <td class="positive">4.19%</td>
+                        <td>45 min</td>
+                        <td>TAKE_PROFIT</td>
+                    </tr>
+            
+                    <tr>
+                        <td>2025-09-26 13:51</td>
+                        <td>2025-09-26 14:21</td>
+                        <td><span class="side-buy">BUY</span></td>
+                        <td>$132942.1155</td>
+                        <td>$129942.2258</td>
+                        <td class="negative">$-5.06</td>
+                        <td class="negative">-2.45%</td>
+                        <td>30 min</td>
+                        <td>STOP_LOSS</td>
+                    </tr>
+            
+                    <tr>
+                        <td>2025-09-30 10:51</td>
+                        <td>2025-09-30 11:51</td>
+                        <td><span class="side-buy">BUY</span></td>
+                        <td>$157475.4998</td>
+                        <td>$165464.3776</td>
+                        <td class="positive">$9.46</td>
+                        <td class="positive">4.87%</td>
+                        <td>60 min</td>
+                        <td>TAKE_PROFIT</td>
+                    </tr>
+            
+                    <tr>
+                        <td>2025-10-03 09:21</td>
+                        <td>2025-10-03 10:06</td>
+                        <td><span class="side-buy">BUY</span></td>
+                        <td>$147074.0374</td>
+                        <td>$142669.6504</td>
+                        <td class="negative">$-4.36</td>
+                        <td class="negative">-3.19%</td>
+                        <td>45 min</td>
+                        <td>STOP_LOSS</td>
+                    </tr>
+            
+                    <tr>
+                        <td>2025-10-03 12:06</td>
+                        <td>2025-10-03 18:36</td>
+                        <td><span class="side-buy">BUY</span></td>
+                        <td>$142939.8945</td>
+                        <td>$151758.2746</td>
+                        <td class="positive">$11.77</td>
+                        <td class="positive">5.96%</td>
+                        <td>390 min</td>
+                        <td>END_OF_DATA</td>
+                    </tr>
+            
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        // Equity Curve Chart
+        const equityCtx = document.getElementById('equityChart').getContext('2d');
+        const equityData = [{'timestamp': '2025-09-04T09:06:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T09:21:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T09:36:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T09:51:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T10:06:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T10:21:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T10:36:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T10:51:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T11:06:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T11:21:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T11:36:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T11:51:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T12:06:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T12:21:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T12:36:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T12:51:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T13:06:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T13:21:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T13:36:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T13:51:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T14:06:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T14:21:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T14:36:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T14:51:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T15:06:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T15:21:31.531961', 'equity': 5000.0, 'drawdown': 0.0}, {'timestamp': '2025-09-04T15:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-04T15:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T09:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T09:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T09:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T09:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T10:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T10:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T10:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T10:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T11:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T11:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T11:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T11:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T12:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T12:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T12:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T12:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T13:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T13:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T13:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T13:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T14:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T14:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T14:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T14:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T15:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T15:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T15:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-05T15:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T09:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T09:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T09:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T09:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T10:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T10:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T10:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T10:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T11:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T11:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T11:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T11:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T12:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T12:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T12:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T12:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T13:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T13:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T13:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T13:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T14:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T14:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T14:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T14:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T15:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T15:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T15:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-06T15:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T09:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T09:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T09:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T09:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T10:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T10:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T10:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T10:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T11:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T11:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T11:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T11:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T12:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T12:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T12:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T12:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T13:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T13:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T13:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T13:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T14:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T14:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T14:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T14:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T15:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T15:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T15:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-07T15:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T09:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T09:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T09:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T09:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T10:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T10:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T10:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T10:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T11:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T11:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T11:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T11:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T12:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T12:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T12:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T12:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T13:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T13:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T13:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T13:51:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T14:06:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T14:21:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T14:36:31.531961', 'equity': 5014.757576197051, 'drawdown': 0.0}, {'timestamp': '2025-09-08T14:51:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-08T15:06:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-08T15:21:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-08T15:36:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-08T15:51:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T09:06:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T09:21:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T09:36:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T09:51:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T10:06:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T10:21:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T10:36:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T10:51:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T11:06:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T11:21:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T11:36:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T11:51:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T12:06:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T12:21:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T12:36:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T12:51:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T13:06:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T13:21:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T13:36:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T13:51:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T14:06:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T14:21:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T14:36:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T14:51:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T15:06:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T15:21:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T15:36:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-09T15:51:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-10T09:06:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-10T09:21:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-10T09:36:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-10T09:51:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-10T10:06:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-10T10:21:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-10T10:36:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-10T10:51:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-10T11:06:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-10T11:21:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-10T11:36:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-10T11:51:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-10T12:06:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-10T12:21:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-10T12:36:31.531961', 'equity': 5025.742125941151, 'drawdown': 0.0}, {'timestamp': '2025-09-10T12:51:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-10T13:06:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-10T13:21:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-10T13:36:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-10T13:51:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-10T14:06:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-10T14:21:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-10T14:36:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-10T14:51:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-10T15:06:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-10T15:21:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-10T15:36:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-10T15:51:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T09:06:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T09:21:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T09:36:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T09:51:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T10:06:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T10:21:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T10:36:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T10:51:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T11:06:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T11:21:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T11:36:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T11:51:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T12:06:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T12:21:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T12:36:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T12:51:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T13:06:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T13:21:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T13:36:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T13:51:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T14:06:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T14:21:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T14:36:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T14:51:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T15:06:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T15:21:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T15:36:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-11T15:51:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-12T09:06:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-12T09:21:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-12T09:36:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-12T09:51:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-12T10:06:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-12T10:21:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-12T10:36:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-12T10:51:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-12T11:06:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-12T11:21:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-12T11:36:31.531961', 'equity': 5038.221502618333, 'drawdown': 0.0}, {'timestamp': '2025-09-12T11:51:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-12T12:06:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-12T12:21:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-12T12:36:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-12T12:51:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-12T13:06:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-12T13:21:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-12T13:36:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-12T13:51:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-12T14:06:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-12T14:21:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-12T14:36:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-12T14:51:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-12T15:06:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-12T15:21:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-12T15:36:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-12T15:51:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T09:06:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T09:21:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T09:36:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T09:51:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T10:06:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T10:21:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T10:36:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T10:51:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T11:06:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T11:21:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T11:36:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T11:51:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T12:06:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T12:21:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T12:36:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T12:51:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T13:06:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T13:21:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T13:36:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T13:51:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T14:06:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T14:21:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T14:36:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T14:51:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T15:06:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T15:21:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T15:36:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-13T15:51:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T09:06:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T09:21:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T09:36:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T09:51:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T10:06:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T10:21:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T10:36:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T10:51:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T11:06:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T11:21:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T11:36:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T11:51:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T12:06:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T12:21:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T12:36:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T12:51:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T13:06:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T13:21:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T13:36:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T13:51:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T14:06:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T14:21:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T14:36:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T14:51:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T15:06:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T15:21:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T15:36:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-14T15:51:31.531961', 'equity': 5034.460299593147, 'drawdown': 0.0007465338757398967}, {'timestamp': '2025-09-15T09:06:31.531961', 'equity': 5100.496137868106, 'drawdown': 0.0}, {'timestamp': '2025-09-15T09:21:31.531961', 'equity': 5100.496137868106, 'drawdown': 0.0}, {'timestamp': '2025-09-15T09:36:31.531961', 'equity': 5100.496137868106, 'drawdown': 0.0}, {'timestamp': '2025-09-15T09:51:31.531961', 'equity': 5100.496137868106, 'drawdown': 0.0}, {'timestamp': '2025-09-15T10:06:31.531961', 'equity': 5100.496137868106, 'drawdown': 0.0}, {'timestamp': '2025-09-15T10:21:31.531961', 'equity': 5100.496137868106, 'drawdown': 0.0}, {'timestamp': '2025-09-15T10:36:31.531961', 'equity': 5100.496137868106, 'drawdown': 0.0}, {'timestamp': '2025-09-15T10:51:31.531961', 'equity': 5100.496137868106, 'drawdown': 0.0}, {'timestamp': '2025-09-15T11:06:31.531961', 'equity': 5100.496137868106, 'drawdown': 0.0}, {'timestamp': '2025-09-15T11:21:31.531961', 'equity': 5100.496137868106, 'drawdown': 0.0}, {'timestamp': '2025-09-15T11:36:31.531961', 'equity': 5100.496137868106, 'drawdown': 0.0}, {'timestamp': '2025-09-15T11:51:31.531961', 'equity': 5100.496137868106, 'drawdown': 0.0}, {'timestamp': '2025-09-15T12:06:31.531961', 'equity': 5100.496137868106, 'drawdown': 0.0}, {'timestamp': '2025-09-15T12:21:31.531961', 'equity': 5100.496137868106, 'drawdown': 0.0}, {'timestamp': '2025-09-15T12:36:31.531961', 'equity': 5100.496137868106, 'drawdown': 0.0}, {'timestamp': '2025-09-15T12:51:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-15T13:06:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-15T13:21:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-15T13:36:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-15T13:51:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-15T14:06:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-15T14:21:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-15T14:36:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-15T14:51:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-15T15:06:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-15T15:21:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-15T15:36:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-15T15:51:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T09:06:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T09:21:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T09:36:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T09:51:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T10:06:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T10:21:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T10:36:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T10:51:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T11:06:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T11:21:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T11:36:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T11:51:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T12:06:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T12:21:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T12:36:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T12:51:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T13:06:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T13:21:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T13:36:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T13:51:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T14:06:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T14:21:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T14:36:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T14:51:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T15:06:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T15:21:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T15:36:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-16T15:51:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T09:06:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T09:21:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T09:36:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T09:51:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T10:06:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T10:21:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T10:36:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T10:51:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T11:06:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T11:21:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T11:36:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T11:51:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T12:06:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T12:21:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T12:36:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T12:51:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T13:06:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T13:21:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T13:36:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T13:51:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T14:06:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T14:21:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T14:36:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T14:51:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T15:06:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T15:21:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T15:36:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-17T15:51:31.531961', 'equity': 5108.7274078674145, 'drawdown': 0.0}, {'timestamp': '2025-09-18T09:06:31.531961', 'equity': 5126.49839691157, 'drawdown': 0.0}, {'timestamp': '2025-09-18T09:21:31.531961', 'equity': 5126.49839691157, 'drawdown': 0.0}, {'timestamp': '2025-09-18T09:36:31.531961', 'equity': 5126.49839691157, 'drawdown': 0.0}, {'timestamp': '2025-09-18T09:51:31.531961', 'equity': 5126.49839691157, 'drawdown': 0.0}, {'timestamp': '2025-09-18T10:06:31.531961', 'equity': 5126.49839691157, 'drawdown': 0.0}, {'timestamp': '2025-09-18T10:21:31.531961', 'equity': 5126.49839691157, 'drawdown': 0.0}, {'timestamp': '2025-09-18T10:36:31.531961', 'equity': 5126.49839691157, 'drawdown': 0.0}, {'timestamp': '2025-09-18T10:51:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-18T11:06:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-18T11:21:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-18T11:36:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-18T11:51:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-18T12:06:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-18T12:21:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-18T12:36:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-18T12:51:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-18T13:06:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-18T13:21:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-18T13:36:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-18T13:51:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-18T14:06:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-18T14:21:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-18T14:36:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-18T14:51:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-18T15:06:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-18T15:21:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-18T15:36:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-18T15:51:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-19T09:06:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-19T09:21:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-19T09:36:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-19T09:51:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-19T10:06:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-19T10:21:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-19T10:36:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-19T10:51:31.531961', 'equity': 5118.996736983318, 'drawdown': 0.0014633106942491226}, {'timestamp': '2025-09-19T11:06:31.531961', 'equity': 5110.060794636026, 'drawdown': 0.003206399573917133}, {'timestamp': '2025-09-19T11:21:31.531961', 'equity': 5110.060794636026, 'drawdown': 0.003206399573917133}, {'timestamp': '2025-09-19T11:36:31.531961', 'equity': 5110.060794636026, 'drawdown': 0.003206399573917133}, {'timestamp': '2025-09-19T11:51:31.531961', 'equity': 5110.060794636026, 'drawdown': 0.003206399573917133}, {'timestamp': '2025-09-19T12:06:31.531961', 'equity': 5110.060794636026, 'drawdown': 0.003206399573917133}, {'timestamp': '2025-09-19T12:21:31.531961', 'equity': 5110.060794636026, 'drawdown': 0.003206399573917133}, {'timestamp': '2025-09-19T12:36:31.531961', 'equity': 5110.060794636026, 'drawdown': 0.003206399573917133}, {'timestamp': '2025-09-19T12:51:31.531961', 'equity': 5110.060794636026, 'drawdown': 0.003206399573917133}, {'timestamp': '2025-09-19T13:06:31.531961', 'equity': 5110.060794636026, 'drawdown': 0.003206399573917133}, {'timestamp': '2025-09-19T13:21:31.531961', 'equity': 5110.060794636026, 'drawdown': 0.003206399573917133}, {'timestamp': '2025-09-19T13:36:31.531961', 'equity': 5110.060794636026, 'drawdown': 0.003206399573917133}, {'timestamp': '2025-09-19T13:51:31.531961', 'equity': 5110.060794636026, 'drawdown': 0.003206399573917133}, {'timestamp': '2025-09-19T14:06:31.531961', 'equity': 5110.060794636026, 'drawdown': 0.003206399573917133}, {'timestamp': '2025-09-19T14:21:31.531961', 'equity': 5110.060794636026, 'drawdown': 0.003206399573917133}, {'timestamp': '2025-09-19T14:36:31.531961', 'equity': 5105.757855637335, 'drawdown': 0.004045752025735643}, {'timestamp': '2025-09-19T14:51:31.531961', 'equity': 5105.757855637335, 'drawdown': 0.004045752025735643}, {'timestamp': '2025-09-19T15:06:31.531961', 'equity': 5105.757855637335, 'drawdown': 0.004045752025735643}, {'timestamp': '2025-09-19T15:21:31.531961', 'equity': 5105.757855637335, 'drawdown': 0.004045752025735643}, {'timestamp': '2025-09-19T15:36:31.531961', 'equity': 5105.757855637335, 'drawdown': 0.004045752025735643}, {'timestamp': '2025-09-19T15:51:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T09:06:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T09:21:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T09:36:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T09:51:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T10:06:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T10:21:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T10:36:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T10:51:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T11:06:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T11:21:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T11:36:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T11:51:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T12:06:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T12:21:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T12:36:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T12:51:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T13:06:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T13:21:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T13:36:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T13:51:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T14:06:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T14:21:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T14:36:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T14:51:31.531961', 'equity': 5095.057762128528, 'drawdown': 0.00613296491070455}, {'timestamp': '2025-09-20T15:06:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-20T15:21:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-20T15:36:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-20T15:51:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T09:06:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T09:21:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T09:36:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T09:51:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T10:06:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T10:21:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T10:36:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T10:51:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T11:06:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T11:21:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T11:36:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T11:51:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T12:06:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T12:21:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T12:36:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T12:51:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T13:06:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T13:21:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T13:36:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T13:51:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T14:06:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T14:21:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T14:36:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T14:51:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T15:06:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T15:21:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T15:36:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-21T15:51:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-22T09:06:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-22T09:21:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-22T09:36:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-22T09:51:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-22T10:06:31.531961', 'equity': 5089.551178259071, 'drawdown': 0.0072071062530240275}, {'timestamp': '2025-09-22T10:21:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T10:36:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T10:51:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T11:06:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T11:21:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T11:36:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T11:51:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T12:06:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T12:21:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T12:36:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T12:51:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T13:06:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T13:21:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T13:36:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T13:51:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T14:06:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T14:21:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T14:36:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T14:51:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T15:06:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T15:21:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T15:36:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-22T15:51:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T09:06:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T09:21:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T09:36:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T09:51:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T10:06:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T10:21:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T10:36:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T10:51:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T11:06:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T11:21:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T11:36:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T11:51:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T12:06:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T12:21:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T12:36:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T12:51:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T13:06:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T13:21:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T13:36:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T13:51:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T14:06:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T14:21:31.531961', 'equity': 5098.128760510487, 'drawdown': 0.005533920856812147}, {'timestamp': '2025-09-23T14:36:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-23T14:51:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-23T15:06:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-23T15:21:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-23T15:36:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-23T15:51:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-24T09:06:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-24T09:21:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-24T09:36:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-24T09:51:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-24T10:06:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-24T10:21:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-24T10:36:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-24T10:51:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-24T11:06:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-24T11:21:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-24T11:36:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-24T11:51:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-24T12:06:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-24T12:21:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-24T12:36:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-24T12:51:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-24T13:06:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-24T13:21:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-24T13:36:31.531961', 'equity': 5093.980710419979, 'drawdown': 0.006343059916137147}, {'timestamp': '2025-09-24T13:51:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-24T14:06:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-24T14:21:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-24T14:36:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-24T14:51:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-24T15:06:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-24T15:21:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-24T15:36:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-24T15:51:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T09:06:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T09:21:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T09:36:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T09:51:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T10:06:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T10:21:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T10:36:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T10:51:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T11:06:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T11:21:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T11:36:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T11:51:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T12:06:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T12:21:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T12:36:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T12:51:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T13:06:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T13:21:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T13:36:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T13:51:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T14:06:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T14:21:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T14:36:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T14:51:31.531961', 'equity': 5089.2399355245825, 'drawdown': 0.007267818792147437}, {'timestamp': '2025-09-25T15:06:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-25T15:21:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-25T15:36:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-25T15:51:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T09:06:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T09:21:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T09:36:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T09:51:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T10:06:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T10:21:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T10:36:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T10:51:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T11:06:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T11:21:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T11:36:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T11:51:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T12:06:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T12:21:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T12:36:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T12:51:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T13:06:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T13:21:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T13:36:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T13:51:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T14:06:31.531961', 'equity': 5099.064977690013, 'drawdown': 0.005351297727525775}, {'timestamp': '2025-09-26T14:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-26T14:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-26T14:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-26T15:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-26T15:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-26T15:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-26T15:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T09:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T09:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T09:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T09:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T10:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T10:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T10:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T10:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T11:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T11:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T11:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T11:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T12:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T12:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T12:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T12:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T13:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T13:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T13:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T13:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T14:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T14:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T14:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T14:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T15:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T15:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T15:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-27T15:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T09:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T09:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T09:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T09:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T10:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T10:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T10:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T10:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T11:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T11:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T11:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T11:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T12:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T12:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T12:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T12:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T13:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T13:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T13:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T13:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T14:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T14:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T14:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T14:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T15:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T15:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T15:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-28T15:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T09:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T09:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T09:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T09:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T10:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T10:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T10:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T10:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T11:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T11:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T11:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T11:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T12:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T12:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T12:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T12:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T13:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T13:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T13:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T13:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T14:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T14:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T14:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T14:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T15:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T15:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T15:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-29T15:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-30T09:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-30T09:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-30T09:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-30T09:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-30T10:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-30T10:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-30T10:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-30T10:51:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-30T11:06:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-30T11:21:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-30T11:36:31.531961', 'equity': 5094.0035240031075, 'drawdown': 0.0063386097863678235}, {'timestamp': '2025-09-30T11:51:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-09-30T12:06:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-09-30T12:21:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-09-30T12:36:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-09-30T12:51:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-09-30T13:06:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-09-30T13:21:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-09-30T13:36:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-09-30T13:51:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-09-30T14:06:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-09-30T14:21:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-09-30T14:36:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-09-30T14:51:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-09-30T15:06:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-09-30T15:21:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-09-30T15:36:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-09-30T15:51:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T09:06:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T09:21:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T09:36:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T09:51:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T10:06:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T10:21:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T10:36:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T10:51:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T11:06:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T11:21:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T11:36:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T11:51:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T12:06:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T12:21:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T12:36:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T12:51:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T13:06:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T13:21:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T13:36:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T13:51:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T14:06:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T14:21:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T14:36:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T14:51:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T15:06:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T15:21:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T15:36:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-01T15:51:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T09:06:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T09:21:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T09:36:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T09:51:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T10:06:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T10:21:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T10:36:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T10:51:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T11:06:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T11:21:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T11:36:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T11:51:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T12:06:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T12:21:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T12:36:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T12:51:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T13:06:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T13:21:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T13:36:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T13:51:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T14:06:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T14:21:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T14:36:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T14:51:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T15:06:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T15:21:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T15:36:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-02T15:51:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-03T09:06:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-03T09:21:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-03T09:36:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-03T09:51:31.531961', 'equity': 5103.467699003193, 'drawdown': 0.004492481246507712}, {'timestamp': '2025-10-03T10:06:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T10:21:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T10:36:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T10:51:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T11:06:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T11:21:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T11:36:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T11:51:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T12:06:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T12:21:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T12:36:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T12:51:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T13:06:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T13:21:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T13:36:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T13:51:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T14:06:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T14:21:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T14:36:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T14:51:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T15:06:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T15:21:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T15:36:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}, {'timestamp': '2025-10-03T15:51:31.531961', 'equity': 5099.109764681282, 'drawdown': 0.005342561356653884}];
+        
+        new Chart(equityCtx, {
+            type: 'line',
+            data: {
+                labels: equityData.map(d => new Date(d.timestamp).toLocaleDateString()),
+                datasets: [{
+                    label: 'Equity',
+                    data: equityData.map(d => d.equity),
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false
+                    }
+                }
+            }
+        });
+        
+        // Drawdown Chart
+        const drawdownCtx = document.getElementById('drawdownChart').getContext('2d');
+        new Chart(drawdownCtx, {
+            type: 'line',
+            data: {
+                labels: equityData.map(d => new Date(d.timestamp).toLocaleDateString()),
+                datasets: [{
+                    label: 'Drawdown %',
+                    data: equityData.map(d => d.drawdown * 100),
+                    borderColor: '#dc3545',
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // P&L Distribution Chart
+        const pnlCtx = document.getElementById('pnlChart').getContext('2d');
+        const tradesData = [{'entry_time': '2025-09-04T14:21:31.531961', 'exit_time': '2025-09-04T15:36:31.531961', 'pnl': 14.75757619705074, 'pnl_pct': 0.06225466247395744, 'side': 'BUY', 'exit_reason': 'TAKE_PROFIT'}, {'entry_time': '2025-09-08T13:21:31.531961', 'exit_time': '2025-09-08T14:51:31.531961', 'pnl': 10.984549744099727, 'pnl_pct': 0.05806694304973, 'side': 'BUY', 'exit_reason': 'TAKE_PROFIT'}, {'entry_time': '2025-09-10T10:06:31.531961', 'exit_time': '2025-09-10T12:51:31.531961', 'pnl': 12.479376677182008, 'pnl_pct': 0.0595905677095288, 'side': 'BUY', 'exit_reason': 'TAKE_PROFIT'}, {'entry_time': '2025-09-12T11:36:31.531961', 'exit_time': '2025-09-12T11:51:31.531961', 'pnl': -3.7612030251857096, 'pnl_pct': -0.030178706981480164, 'side': 'BUY', 'exit_reason': 'STOP_LOSS'}, {'entry_time': '2025-09-14T14:36:31.531961', 'exit_time': '2025-09-15T09:06:31.531961', 'pnl': 66.03583827495954, 'pnl_pct': 0.3982610906747132, 'side': 'BUY', 'exit_reason': 'TAKE_PROFIT'}, {'entry_time': '2025-09-15T12:36:31.531961', 'exit_time': '2025-09-15T12:51:31.531961', 'pnl': 8.231269999308097, 'pnl_pct': 0.04974976845536028, 'side': 'BUY', 'exit_reason': 'TAKE_PROFIT'}, {'entry_time': '2025-09-17T14:51:31.531961', 'exit_time': '2025-09-18T09:06:31.531961', 'pnl': 17.770989044155467, 'pnl_pct': 0.1088712299559621, 'side': 'BUY', 'exit_reason': 'TAKE_PROFIT'}, {'entry_time': '2025-09-18T10:21:31.531961', 'exit_time': '2025-09-18T10:51:31.531961', 'pnl': -7.5016599282519065, 'pnl_pct': -0.03457294786743372, 'side': 'BUY', 'exit_reason': 'STOP_LOSS'}, {'entry_time': '2025-09-19T10:21:31.531961', 'exit_time': '2025-09-19T11:06:31.531961', 'pnl': -8.935942347292574, 'pnl_pct': -0.042400139982126474, 'side': 'BUY', 'exit_reason': 'STOP_LOSS'}, {'entry_time': '2025-09-19T13:51:31.531961', 'exit_time': '2025-09-19T14:36:31.531961', 'pnl': -4.302938998691419, 'pnl_pct': -0.04186599863648207, 'side': 'BUY', 'exit_reason': 'STOP_LOSS'}, {'entry_time': '2025-09-19T15:06:31.531961', 'exit_time': '2025-09-19T15:51:31.531961', 'pnl': -10.70009350880588, 'pnl_pct': -0.05036799953510955, 'side': 'BUY', 'exit_reason': 'STOP_LOSS'}, {'entry_time': '2025-09-20T13:21:31.531961', 'exit_time': '2025-09-20T15:06:31.531961', 'pnl': -5.506583869457033, 'pnl_pct': -0.02880207187144176, 'side': 'BUY', 'exit_reason': 'STOP_LOSS'}, {'entry_time': '2025-09-21T15:51:31.531961', 'exit_time': '2025-09-22T10:21:31.531961', 'pnl': 8.577582251415901, 'pnl_pct': 0.04642006205501192, 'side': 'BUY', 'exit_reason': 'TAKE_PROFIT'}, {'entry_time': '2025-09-23T13:36:31.531961', 'exit_time': '2025-09-23T14:36:31.531961', 'pnl': -4.148050090507908, 'pnl_pct': -0.03216247093450844, 'side': 'SELL', 'exit_reason': 'STOP_LOSS'}, {'entry_time': '2025-09-24T12:21:31.531961', 'exit_time': '2025-09-24T13:51:31.531961', 'pnl': -4.740774895396539, 'pnl_pct': -0.030730421151631212, 'side': 'BUY', 'exit_reason': 'STOP_LOSS'}, {'entry_time': '2025-09-25T14:21:31.531961', 'exit_time': '2025-09-25T15:06:31.531961', 'pnl': 9.82504216543035, 'pnl_pct': 0.04185225209295457, 'side': 'BUY', 'exit_reason': 'TAKE_PROFIT'}, {'entry_time': '2025-09-26T13:51:31.531961', 'exit_time': '2025-09-26T14:21:31.531961', 'pnl': -5.061453686905001, 'pnl_pct': -0.024542817846926294, 'side': 'BUY', 'exit_reason': 'STOP_LOSS'}, {'entry_time': '2025-09-30T10:51:31.531961', 'exit_time': '2025-09-30T11:51:31.531961', 'pnl': 9.46417500008575, 'pnl_pct': 0.048680194009351294, 'side': 'BUY', 'exit_reason': 'TAKE_PROFIT'}, {'entry_time': '2025-10-03T09:21:31.531961', 'exit_time': '2025-10-03T10:06:31.531961', 'pnl': -4.357934321910327, 'pnl_pct': -0.03191678659504722, 'side': 'BUY', 'exit_reason': 'STOP_LOSS'}, {'entry_time': '2025-10-03T12:06:31.531961', 'exit_time': '2025-10-03T18:36:31.531961', 'pnl': 11.768237405454856, 'pnl_pct': 0.0596312315674069, 'side': 'BUY', 'exit_reason': 'END_OF_DATA'}];
+        const pnlValues = tradesData.map(t => t.pnl);
+        
+        new Chart(pnlCtx, {
+            type: 'bar',
+            data: {
+                labels: tradesData.map((t, i) => `Trade ${i+1}`),
+                datasets: [{
+                    label: 'P&L',
+                    data: pnlValues,
+                    backgroundColor: pnlValues.map(v => v >= 0 ? 'rgba(40, 167, 69, 0.7)' : 'rgba(220, 53, 69, 0.7)'),
+                    borderColor: pnlValues.map(v => v >= 0 ? '#28a745' : '#dc3545'),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'P&L ($)'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+        

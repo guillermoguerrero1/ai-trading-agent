@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import JSONResponse
 from typing import Optional, List
 
-from app.deps import get_settings, get_supervisor
+from app.deps import get_settings, get_supervisor, get_current_user
 from app.models.base import Settings
 from app.models.limits import GuardrailLimits, GuardrailUpdate, ConfigUpdate
 from app.services.supervisor import Supervisor
@@ -43,6 +43,9 @@ async def get_config(
             "effective": effective_ignore_session,
             "runtime_override": supervisor.runtime_ignore_session,
         },
+        "require_model_gate": {
+            "effective": bool(getattr(request.app.state, "require_model_gate", False)),
+        },
         "broker": settings.BROKER,
         "timezone": settings.TZ,
         "session_provider": settings.SESSION_PROVIDER,
@@ -53,6 +56,7 @@ async def get_config(
 async def update_config(
     config_update: ConfigUpdate,
     request: Request,
+    current_user: dict = Depends(get_current_user),
     settings: Settings = Depends(get_settings),
     supervisor: Supervisor = Depends(get_supervisor)
 ):
@@ -72,9 +76,14 @@ async def update_config(
             ignore_session=config_update.ignore_session
         )
         
+        # Update model gate toggle if provided
+        if config_update.require_model_gate is not None:
+            request.app.state.require_model_gate = bool(config_update.require_model_gate)
+        
         # Get effective values after update
         effective_session_windows = supervisor.get_effective_session_windows(settings)
         effective_ignore_session = supervisor.get_effective_ignore_session()
+        effective_model_gate = bool(getattr(request.app.state, "require_model_gate", False))
         
         return {
             "message": "Runtime configuration updated successfully",
@@ -86,6 +95,9 @@ async def update_config(
             "ignore_session": {
                 "effective": effective_ignore_session,
                 "runtime_override": supervisor.runtime_ignore_session,
+            },
+            "require_model_gate": {
+                "effective": effective_model_gate,
             },
         }
         

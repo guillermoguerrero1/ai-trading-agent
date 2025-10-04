@@ -33,3 +33,7 @@ class TradeLog(SQLModel, table=True):
     # context/features captured at entry time (free-form)
     features: Optional[Dict[str, Any]] = Field(default=None, sa_type=JSON)
     notes: Optional[str] = None
+    
+    # model tracking
+    model_score: Optional[float] = None
+    model_version: Optional[str] = None  # e.g., file hash or timestamp

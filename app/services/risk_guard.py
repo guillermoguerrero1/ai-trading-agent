@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from app.models.base import Settings
 from app.models.limits import GuardrailLimits, GuardrailViolation, ViolationSeverity
 from app.models.event import Event, EventType, EventSeverity
+from app.services.metrics import get_metrics_service
 
 import structlog
 
@@ -134,6 +135,17 @@ class RiskGuard:
                     )
                 )
             
+            # Check model gate (if enabled)
+            model_check = self._check_model_gate(signal)
+            if not model_check.allowed:
+                # Record model block metric
+                metrics_service = get_metrics_service()
+                metrics_service.record_model_block(
+                    model_version="0.1.0",  # TODO: Get from actual model
+                    reason=model_check.reason
+                )
+                return model_check
+            
             return RiskDecision(allowed=True, reason="Signal approved")
             
         except Exception as e:
@@ -142,6 +154,29 @@ class RiskGuard:
                 allowed=False,
                 reason=f"Risk check error: {str(e)}"
             )
+    
+    def _check_model_gate(self, signal) -> RiskDecision:
+        """
+        Check model gate (placeholder for model-based blocking).
+        
+        Args:
+            signal: Signal to check
+            
+        Returns:
+            Risk decision
+        """
+        # TODO: Implement actual model checking
+        # For now, this is a placeholder that always allows signals
+        # In production, this would check model confidence, thresholds, etc.
+        
+        # Example: Block if confidence is too low
+        if hasattr(signal, 'confidence') and signal.confidence < 0.5:
+            return RiskDecision(
+                allowed=False,
+                reason="Model confidence too low"
+            )
+        
+        return RiskDecision(allowed=True, reason="Model gate passed")
     
     async def check_order(self, order) -> RiskDecision:
         """

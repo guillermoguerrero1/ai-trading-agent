@@ -119,7 +119,8 @@ async def create_tables(settings: Settings = None):
         from app.models.limits import GuardrailViolation
         from app.models.trade_log import TradeLog  # noqa
         
-        # Create all tables
+        # Drop and recreate all tables (for development)
+        await conn.run_sync(SQLModel.metadata.drop_all)
         await conn.run_sync(SQLModel.metadata.create_all)
         
         logger.info("Database tables created successfully")

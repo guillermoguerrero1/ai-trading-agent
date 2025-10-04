@@ -4,9 +4,10 @@ services:
   api:
     build: .
     ports:
-      - "8000:8000"
+      - "9001:9001"
     environment:
       - APP_ENV=dev
+      - API_PORT=9001
       - DATABASE_URL=sqlite:///./trading_agent.db
       - MLFLOW_TRACKING_URI=http://mlflow:5000
     volumes:
@@ -15,14 +16,14 @@ services:
       - trading_data:/app/data
     depends_on:
       - mlflow
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 9001 --reload
 
   ui:
     build: .
     ports:
       - "8501:8501"
     environment:
-      - API_URL=http://api:8000
+      - API_URL=http://api:9001
     volumes:
       - ./ui:/app/ui
     depends_on:

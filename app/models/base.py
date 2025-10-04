@@ -37,6 +37,13 @@ class Settings(BaseSettings):
     LOG_FORMAT: str = "json"
     LOG_DIR: str = "./logs"
 
+    # Authentication
+    JWT_SECRET: str = "your-secret-key-change-in-production"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_AUDIENCE: str = "ai-trading-agent"
+    JWT_ISSUER: str = "ai-trading-agent"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
     # Broker & Risk (aliases for Cursor-style names)
     BROKER: str = Field("paper", alias="BROKER_TYPE")
     INITIAL_CAPITAL: float = 100000.0

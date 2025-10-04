@@ -4,6 +4,8 @@ Paper trading broker implementation
 
 import asyncio
 import random
+import hashlib
+import os
 from collections import defaultdict
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -149,16 +151,45 @@ class PaperBroker(IBroker):
         
         # Log trade opening if trade_logger is available
         if self.trade_logger:
+            # Compute model score and version for logging
+            model_path = os.getenv("MODEL_PATH", "models/clf.joblib")
+            model_version = None
+            model_score = None
+            
+            if os.path.exists(model_path):
+                try:
+                    with open(model_path, "rb") as f:
+                        model_version = hashlib.md5(f.read()).hexdigest()
+                except Exception:
+                    model_version = None
+            
+            # Compute model score if we can build features
+            try:
+                from agent.infer import score
+                entry_price = float(order_request.price) if order_request.price else float(self.market_prices.get(order_request.symbol, Decimal("100.00")))
+                stop_price = float(order_request.stop_price) if order_request.stop_price else entry_price
+                target_price = entry_price  # Use entry as fallback
+                
+                risk = abs(entry_price - stop_price)
+                rr = (abs(target_price - entry_price) / (risk if risk > 0 else 1.0))
+                features = {"risk": risk, "rr": rr}
+                
+                model_score = score(features)
+            except Exception:
+                model_score = None
+            
             await self.trade_logger.log_open(
                 order_id=order_id,
                 symbol=order_request.symbol,
-                side=order_request.side.value,
+                side=order_request.side,
                 qty=float(order_request.quantity),
                 entry=float(order_request.price) if order_request.price else float(self.market_prices.get(order_request.symbol, Decimal("100.00"))),
                 stop=float(order_request.stop_price) if order_request.stop_price else None,
                 target=None,  # PaperBroker doesn't have explicit target in OrderRequest
                 features=order_request.metadata,
                 notes="paper.open",
+                model_score=model_score,
+                model_version=model_version,
             )
         
         # Simulate order execution

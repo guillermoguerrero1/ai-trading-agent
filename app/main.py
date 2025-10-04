@@ -4,6 +4,7 @@ AI Trading Agent FastAPI Application
 
 import contextlib
 import asyncio
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -14,7 +15,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 
 from app.deps import get_settings
 from app.store.db import create_tables
-from app.routes import health, config, signal, orders, pnl, debug, trade_logs, debug_routes
+from app.routes import health, config, signal, orders, pnl, debug, trade_logs, debug_routes, export, model, metrics, broker
 try:
     from app.routes import tick  # optional, only if file exists
     HAS_TICK = True
@@ -30,14 +31,24 @@ logger = structlog.get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("startup.begin", app="ai-trading-agent")
+    
+    settings = get_settings()
+    
     try:
         await create_tables()
         logger.info("db.init.ok")
+        
+        # Log current database revision
+        try:
+            from ops.migrations.get_revision import get_current_revision
+            current_revision = get_current_revision(settings.DATABASE_URL)
+            logger.info("db.revision", revision=current_revision)
+        except Exception as e:
+            logger.warning("db.revision.error", error=str(e))
     except Exception as e:
         logger.exception("db.init.error", error=str(e))
         raise
 
-    settings = get_settings()
     risk_guard = RiskGuard(settings)
     app.state.risk_guard = risk_guard
     supervisor = Supervisor(risk_guard)
@@ -51,6 +62,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     from app.services.trade_logger import TradeLogger
     trade_logger = TradeLogger()
     app.state.trade_logger = trade_logger
+    
+    # Initialize brokers based on configuration
+    broker_type = os.getenv("BROKER", "").lower()
+    
+    if broker_type == "ibkr":
+        from app.services.execution.ibkr import IBKRAdapter
+        ibkr_adapter = IBKRAdapter()
+        app.state.ibkr_adapter = ibkr_adapter
+        logger.info("IBKR adapter initialized")
+    else:
+        # Default to paper broker
+        from app.services.execution.paper import PaperBroker
+        paper_broker = PaperBroker(trade_logger=trade_logger)
+        app.state.paper_broker = paper_broker
+        logger.info("Paper broker initialized")
 
     # Log effective settings snapshot
     logger.info(
@@ -115,6 +141,10 @@ def create_app() -> FastAPI:
     app.include_router(debug.router, prefix="/v1", tags=["debug"])
     app.include_router(debug_routes.router, prefix="/v1", tags=["debug"])
     app.include_router(trade_logs.router, prefix="/v1", tags=["logs"])
+    app.include_router(export.router, prefix="/v1", tags=["export"])
+    app.include_router(model.router, prefix="/v1", tags=["model"])
+    app.include_router(metrics.router, prefix="/v1", tags=["metrics"])
+    app.include_router(broker.router, prefix="/v1", tags=["broker"])
     if HAS_TICK:
         app.include_router(tick.router, prefix="/v1", tags=["tick"])
 

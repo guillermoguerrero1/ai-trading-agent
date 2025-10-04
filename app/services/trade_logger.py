@@ -22,6 +22,8 @@ class TradeLogger:
         target: Optional[float],
         features: Optional[Dict[str, Any]] = None,
         notes: Optional[str] = None,
+        model_score: Optional[float] = None,
+        model_version: Optional[str] = None,
     ) -> int:
         row = TradeLog(
             order_id=order_id,
@@ -34,6 +36,8 @@ class TradeLogger:
             entered_at=datetime.utcnow(),
             features=features,
             notes=notes,
+            model_score=model_score,
+            model_version=model_version,
         )
         async with self.session_factory() as s:
             s.add(row)

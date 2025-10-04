@@ -143,6 +143,7 @@ class ConfigUpdate(BaseModel):
     
     session_windows: Optional[List[str]] = Field(default=None, description="Trading session windows in HH:MM-HH:MM format")
     ignore_session: Optional[bool] = Field(default=None, description="Bypass session window checks")
+    require_model_gate: Optional[bool] = Field(default=None, description="Enable model-based order filtering")
     
     @validator('session_windows')
     def validate_session_windows(cls, v):

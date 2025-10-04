@@ -14,6 +14,7 @@ from app.models.order import OrderRequest, OrderResponse, OrderFilter
 from app.models.pnl import PnL, PnLSummary, PnLFilter
 from app.models.account import Account, Position
 from app.services.risk_guard import RiskGuard
+from app.services.metrics import get_metrics_service
 
 import structlog
 
@@ -178,9 +179,24 @@ class Supervisor:
             # Simulate order execution (in production, this would be handled by broker)
             await self._simulate_order_execution(order_response)
             
+            # Record successful order metric
+            metrics_service = get_metrics_service()
+            metrics_service.record_order_ok(
+                symbol=order_response.symbol,
+                side=order_response.side
+            )
+            
             return order_response
             
         except Exception as e:
+            # Record blocked order metric
+            metrics_service = get_metrics_service()
+            metrics_service.record_order_blocked(
+                symbol=order_request.symbol,
+                side=order_request.side,
+                reason=str(e)
+            )
+            
             logger.error("Order submission failed", error=str(e), exc_info=True)
             raise
     
@@ -438,6 +454,10 @@ class Supervisor:
                 source="supervisor"
             )
         )
+        
+        # Record halt metric
+        metrics_service = get_metrics_service()
+        metrics_service.record_halt(reason=reason)
         
         logger.warning("Trading halted", reason=reason)
     

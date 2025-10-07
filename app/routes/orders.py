@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import JSONResponse
 from typing import List, Optional
 from uuid import UUID
+from datetime import datetime, timezone
 import hashlib
 import os
 
@@ -43,6 +44,11 @@ async def create_order(
         Created order response
     """
     try:
+        # Enforce NQ-only orders
+        allowed_roots = {"NQ"}
+        if not any(order_request.symbol.startswith(root) for root in allowed_roots):
+            return JSONResponse(status_code=400, content={"error":"symbol_not_allowed","allowed":"NQ* only"})
+        
         # Check if trading is halted
         if supervisor.is_halted():
             raise HTTPException(
@@ -107,9 +113,38 @@ async def create_order(
             )
         )
         
-        # Log trade opening as backup (in case broker doesn't have TradeLogger)
-        # capture optional features from request body if present
+        # Capture current submission time
+        submitted_at = datetime.now(timezone.utc)
+        
+        # Handle entered_at timestamp logic
+        entered_at = order_request.entered_at or submitted_at
+        
+        # Validate entered_at is not in the future
+        if entered_at > submitted_at:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="entered_at cannot be in the future"
+            )
+        
+        # Capture optional features from request body if present
         features = order_request.dict().get("features") if hasattr(order_request, "dict") else None
+        
+        # Infer source from User-Agent header
+        user_agent = request.headers.get("User-Agent", "").lower()
+        source = "ui" if "streamlit" in user_agent else "manual_json"
+        
+        # Compute backfill detection (unless explicitly provided)
+        if features is None:
+            features = {}
+        
+        if "is_backfill" not in features:
+            # Consider it backfill if entered_at is more than 1 hour before submission
+            time_diff = submitted_at - entered_at
+            features["is_backfill"] = time_diff.total_seconds() > 3600  # 1 hour in seconds
+        
+        if "source" not in features:
+            features["source"] = source
+        
         try:
             # Access TradeLogger directly from app state
             trade_logger = getattr(request.app.state, "trade_logger", None)
@@ -126,8 +161,15 @@ async def create_order(
                     notes="orders.route.open",
                     model_score=model_score,
                     model_version=model_version,
+                    submitted_at=submitted_at,
+                    entered_at=entered_at,
                 )
-                logger.info("Trade logged successfully from orders route", order_id=order_response.order_id)
+                logger.info("Trade logged successfully from orders route", 
+                           order_id=order_response.order_id, 
+                           submitted_at=submitted_at.isoformat(),
+                           entered_at=entered_at.isoformat(),
+                           is_backfill=features.get("is_backfill", False),
+                           source=features.get("source", "unknown"))
             else:
                 logger.warning("TradeLogger not available in app state", order_id=order_response.order_id)
         except Exception as e:

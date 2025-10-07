@@ -1,0 +1,28 @@
+{
+  "symbol": "NQZ5",
+  "side": "BUY",
+  "quantity": 1,
+  "order_type": "LIMIT",
+  "price": 17895.0,
+  "stop_price": 17885.0,
+  "target_price": 17915.0,
+  "paper": true,
+  "features": {
+    "root_symbol": "NQ",
+    "risk": 10.0,
+    "rr": 2.0,
+    "atr14": null,
+    "body_pct": null,
+    "upper_wick_pct": null,
+    "lower_wick_pct": null,
+    "htf_trend": null,
+    "in_session": 1,
+    "strategy_id": "Manual",
+    "setup": "Manual-Entry",
+    "rule_version": "v1.0",
+    "confidence": 0.5,
+    "entry_reason": "Manual submission",
+    "exit_plan": "Target or trail"
+  },
+  "notes": "manual-entry"
+}

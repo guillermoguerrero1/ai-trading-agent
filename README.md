@@ -73,6 +73,195 @@ curl -X POST http://localhost:9001/v1/tick -H "Content-Type: application/json" \
  -d '{"symbol":"NQZ5","price":17894.75}'
 ```
 
+### Quick Trade (template)
+1) Edit `trade_template.json` with side/entry/stop/target.
+2) Submit: `make trade`
+3) Archive: copies to `trades_submitted/` automatically.
+
+## Quick Trade Entry (NQ)
+- Edit `trade_template.json` (set side/entry/stop/target) then:
+  ```bash
+  make trade
+  ```
+- Or use interactive CLI:
+  ```bash
+  make trade-cli
+  ```
+  
+  **CLI Options:**
+  ```bash
+  # Normal usage (current timestamp)
+  python scripts/trade_cli.py
+  
+  # With custom entry timestamp
+  python scripts/trade_cli.py --entered-at "2025-09-12T13:45:00Z"
+  
+  # Mark as backfilled trade
+  python scripts/trade_cli.py --backfill
+  
+  # Both options together
+  python scripts/trade_cli.py --entered-at "2025-09-12T13:45:00Z" --backfill
+  ```
+- Optional: Streamlit form at http://localhost:8501 (Quick Trade tab)
+  - **Datetime Input**: Set custom entry timestamp (defaults to current UTC)
+  - **Backfill Checkbox**: Mark trades as backfilled
+  - **Validation**: Prevents future timestamps
+- All methods use Idempotency-Key headers and auto-archive to `trades_submitted/`
+
+### Backfilling Old Trades
+
+When entering historical trades, include a custom timestamp with **UTC requirement**:
+
+```json
+"entered_at": "2025-09-12T13:45:00Z"
+```
+
+**UTC Requirement**: All timestamps must be in UTC timezone. The server validates this and will reject future timestamps.
+
+**Supported formats:**
+- `2025-09-12T13:45:00Z` (ISO 8601 UTC - **recommended**)
+- `2025-09-12T13:45:00+00:00` (ISO 8601 with timezone)
+- `2025-09-12 13:45:00` (Simple datetime - converted to UTC)
+
+**Example curl with entered_at:**
+```bash
+curl -X POST http://localhost:9001/v1/orders \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: backfill-$(date +%Y%m%d-%H%M%S)" \
+  -d '{
+    "symbol": "NQZ5",
+    "side": "BUY",
+    "quantity": 1,
+    "order_type": "LIMIT",
+    "price": 17895,
+    "stop_price": 17885,
+    "target_price": 17915,
+    "entered_at": "2025-09-12T13:45:00Z",
+    "paper": true,
+    "features": {
+      "strategy_id": "ORB",
+      "setup": "Backfill-Test",
+      "is_backfill": true
+    },
+    "notes": "backfilled trade"
+  }'
+```
+
+**Example backfilled trade JSON:**
+```json
+{
+  "symbol": "NQZ5",
+  "side": "BUY",
+  "quantity": 1,
+  "order_type": "LIMIT",
+  "price": 17895,
+  "stop_price": 17885,
+  "target_price": 17915,
+  "entered_at": "2025-09-12T13:45:00Z",
+  "paper": true,
+  "features": {
+    "strategy_id": "ORB",
+    "setup": "Backfill-Test",
+    "is_backfill": true
+  },
+  "notes": "backfilled trade"
+}
+```
+
+### Backfill Best Practices
+
+**1. Prefer True Historical entered_at**
+- Use actual historical timestamps when available
+- Server auto-detects backfill if `entered_at` is >1 hour before submission
+- More accurate temporal analysis and model training
+
+**2. Set features.is_backfill=true (or let server auto-tag)**
+- Explicitly mark: `"features": {"is_backfill": true}`
+- Or let server auto-detect based on timestamp difference
+- Enables proper filtering and weighting in training
+
+**3. Training Strategy**
+- **Initial Training**: Use `EXCLUDE_BACKFILL=1` to train on live data only
+- **Blended Training**: Use `WEIGHT_BACKFILL=0.5` to include backfill with reduced weight
+- **Environment Variables**:
+  ```bash
+  # Train excluding backfill data
+  EXCLUDE_BACKFILL=1 make train
+  
+  # Train with backfill weighted at 50%
+  EXCLUDE_BACKFILL=0 WEIGHT_BACKFILL=0.5 make train
+  
+  # Train with heavy backfill weighting (10%)
+  EXCLUDE_BACKFILL=0 WEIGHT_BACKFILL=0.1 make train
+  ```
+
+**4. Validation**
+- Server validates `entered_at` is not in the future
+- Returns 400 error for invalid timestamps
+- Auto-computes `is_backfill` flag if not provided
+- Infers `source` from User-Agent header
+
+**Direct database entry** (bypasses API limits):
+```bash
+python scripts/direct_trade_entry.py
+# Follow prompts and enter custom timestamp when asked
+```
+
+## NQ Dataset Audit
+Run a quick quality check on your NQ trades:
+```bash
+make audit
+```
+
+This generates a timestamped report in `reports/audit/` with:
+
+- **✅ PASS**: Dataset meets quality standards
+- **⚠️ WARN**: Issues that should be addressed
+- **❌ FAIL**: Critical problems requiring immediate attention
+
+### Key Metrics
+- **NQ Compliance**: Ensures all trades are NQ futures only
+- **Feature Coverage**: Validates risk/R/R and technical indicators
+- **Outcome Balance**: Checks win/loss distribution (target: 35-65% win rate)
+- **Dataset Size**: Recommends 200-500 trades for stable training
+- **Duplicates**: Detects potential duplicate entries
+- **Backfill Analysis**: Shows backfill vs live/paper trade distribution
+- **Source Tracking**: Displays trade sources (ui, manual_json, backfill_script, etc.)
+- **Temporal Analysis**: Recent live trades, median/quantiles of entered_at timestamps
+- **Data Quality Warnings**: Alerts for >80% backfill or <50 recent live trades
+
+### Sample Report
+```markdown
+# NQ Dataset Audit
+- Total trades: **74**
+- Date range: **2025-01-01 to 2025-10-05**
+- Outcomes: `{"stop": 70, "unknown": 4}`
+
+## Backfill vs Live/Paper Analysis
+- **Backfill trades**: 1 (1.35%)
+- **Live/Paper trades**: 73 (98.7%)
+
+## Source Analysis
+| Source | Count | Percentage |
+|--------|-------|------------|
+| unknown | 72 | 97.3% |
+| test | 1 | 1.4% |
+| manual_json | 1 | 1.4% |
+
+## Temporal Analysis (Live/Paper Trades)
+- **Recent live trades (30d)**: 2
+- **Median entered_at**: 2025-01-01 10:03:30+00:00
+- **Q25 entered_at**: 2025-01-01 09:54:45+00:00
+- **Q75 entered_at**: 2025-01-01 10:12:15+00:00
+
+## Checks
+- [OK] **PASS** - Backfill percentage is reasonable (1.4%)
+- [WARN] **WARN** - Low recent live trade count (2 in last 30 days)
+- [OK] **PASS** - All trades are NQ-only
+- [OK] **PASS** - Core features present (risk, rr)
+- [WARN] **WARN** - Outcome skewed (win rate ~ 0.0%)
+```
+
 ## 📡 API Examples
 
 ### Health Check
@@ -732,6 +921,13 @@ make test-logs       # Test trade logs endpoints
 make dataset         # Build dataset from trade logs
 make train           # Train baseline model
 make model-status    # Check model status and metrics
+
+# Training with Backfill Support
+make train-with-backfill      # Train with backfill data (weighted at 0.5)
+make train-exclude-backfill   # Train excluding backfill data
+make train-heavy-backfill-weight # Train with heavy backfill weighting (0.1)
+make dataset-with-backfill    # Build dataset with backfill data
+make dataset-exclude-backfill # Build dataset excluding backfill data
 
 # System management
 make reset           # Complete system reset

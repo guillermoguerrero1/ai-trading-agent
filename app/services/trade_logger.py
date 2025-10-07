@@ -24,6 +24,8 @@ class TradeLogger:
         notes: Optional[str] = None,
         model_score: Optional[float] = None,
         model_version: Optional[str] = None,
+        submitted_at: Optional[datetime] = None,
+        entered_at: Optional[datetime] = None,
     ) -> int:
         row = TradeLog(
             order_id=order_id,
@@ -33,7 +35,8 @@ class TradeLogger:
             entry_price=entry,
             stop_price=stop,
             target_price=target,
-            entered_at=datetime.utcnow(),
+            submitted_at=submitted_at,
+            entered_at=entered_at or datetime.utcnow(),
             features=features,
             notes=notes,
             model_score=model_score,

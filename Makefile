@@ -40,6 +40,13 @@ help:
 	@echo "  train         Train baseline model"
 	@echo "  model-status  Check model status and metrics"
 	@echo ""
+	@echo "Training with Backfill Support:"
+	@echo "  train-with-backfill      Train with backfill data (weighted at 0.5)"
+	@echo "  train-exclude-backfill   Train excluding backfill data"
+	@echo "  train-heavy-backfill-weight Train with heavy backfill weighting (0.1)"
+	@echo "  dataset-with-backfill    Build dataset with backfill data"
+	@echo "  dataset-exclude-backfill Build dataset excluding backfill data"
+	@echo ""
 	@echo "NQ Futures:"
 	@echo "  nq-backfill   Generate NQ breakout trades from CSV data"
 	@echo "  nq-dataset    Build dataset from NQ trades (exclude seed data)"
@@ -361,6 +368,28 @@ dataset:
 train:
 	python engines/supervised/train.py
 
+# Training with backfill support
+train-with-backfill:
+	@echo "Training with backfill data (weighted at 0.5)..."
+	EXCLUDE_BACKFILL=0 WEIGHT_BACKFILL=0.5 VALIDATION_SPLIT=0.2 RECENT_LIVE_PCT=0.3 python engines/supervised/train.py
+
+train-exclude-backfill:
+	@echo "Training excluding backfill data..."
+	EXCLUDE_BACKFILL=1 WEIGHT_BACKFILL=1.0 VALIDATION_SPLIT=0.25 RECENT_LIVE_PCT=0.4 python engines/supervised/train.py
+
+train-heavy-backfill-weight:
+	@echo "Training with heavy backfill weighting (0.1)..."
+	EXCLUDE_BACKFILL=0 WEIGHT_BACKFILL=0.1 VALIDATION_SPLIT=0.15 RECENT_LIVE_PCT=0.5 python engines/supervised/train.py
+
+# Dataset building with backfill support
+dataset-with-backfill:
+	@echo "Building dataset with backfill data..."
+	EXCLUDE_BACKFILL=0 WEIGHT_BACKFILL=0.5 python engines/supervised/build_dataset.py
+
+dataset-exclude-backfill:
+	@echo "Building dataset excluding backfill data..."
+	EXCLUDE_BACKFILL=1 WEIGHT_BACKFILL=1.0 python engines/supervised/build_dataset.py
+
 # Model status check
 model-status:
 	@echo "Checking model status and metrics..."
@@ -545,3 +574,23 @@ nq-all: nq-backfill nq-dataset nq-train
 	@echo ""
 	@echo "✅ NQ backfill + dataset + train complete"
 	@echo "Check model status: curl -s http://localhost:9001/v1/model/status | jq"
+
+# Trade submission
+trade:
+	./scripts/submit_trade.sh trade_template.json
+
+trade-file:
+	./scripts/submit_trade.sh $(FILE)
+
+trade-cli:
+	./scripts/trade_cli.py
+
+trade-cli-backfill:
+	./scripts/trade_cli.py --backfill
+
+trade-cli-timestamp:
+	./scripts/trade_cli.py --entered-at "2025-09-12T13:45:00Z"
+
+audit:
+	@python scripts/audit_nq_dataset.py
+	@ls -1t reports/audit/audit_*.md | head -n1 | xargs -I{} echo "📄 Latest report: {}"

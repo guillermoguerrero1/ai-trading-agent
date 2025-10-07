@@ -49,6 +49,7 @@ class OrderRequest(BaseModel):
     stop_price: Optional[Decimal] = Field(default=None, description="Stop price (for stop orders)")
     time_in_force: str = Field(default="DAY", description="Time in force")
     client_order_id: Optional[str] = Field(default=None, description="Client order ID")
+    entered_at: Optional[datetime] = Field(default=None, description="Custom entry timestamp for backfilled trades")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Order metadata")
     
     class Config:

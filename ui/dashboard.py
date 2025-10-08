@@ -190,11 +190,12 @@ def show_overview():
         if isinstance(data, list) and data:
             df = pd.DataFrame(data)
             cols = ["created_at","symbol","side","qty","entry_price","exit_price","pnl_usd","r_multiple","outcome"]
-            st.dataframe(df[[c for c in cols if c in df.columns]])
+            st.dataframe(df[[c for c in cols if c in df.columns]], use_container_width=True)
+            st.info(f"Showing {len(data)} trades")
         else:
             st.write("No trades yet.")
-    except Exception:
-        st.write("Could not load trades.")
+    except Exception as e:
+        st.error(f"Could not load trades: {str(e)}")
 
 
 def show_pnl():

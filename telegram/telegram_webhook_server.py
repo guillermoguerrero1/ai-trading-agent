@@ -105,9 +105,8 @@ def parse_trade(text: str) -> Tuple[dict, list[str]]:
         "order_type": "LIMIT",
         "price": entry,
         "stop_price": stop,
-        "target_price": target,
-        "paper": True,
-        "features": {
+        "metadata": {
+            "target_price": target,
             "root_symbol": "NQ",
             "risk": risk,
             "rr": rr,
@@ -117,8 +116,7 @@ def parse_trade(text: str) -> Tuple[dict, list[str]]:
             "rule_version": "v1.0",
             "confidence": conf,
             "source": "telegram"
-        },
-        "notes": "telegram-webhook-test"
+        }
     }
 
     return payload, warnings

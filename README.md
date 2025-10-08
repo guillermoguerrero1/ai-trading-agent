@@ -231,7 +231,7 @@ TELEGRAM_ENABLE=true
 
 The system will automatically download ngrok for you:
 ```bash
-python download_ngrok.py  # Auto-downloads to C:\Users\Owner\ngrok\
+python telegram/download_ngrok.py  # Auto-downloads to C:\Users\Owner\ngrok\
 ```
 
 Then configure your ngrok auth token:
@@ -246,8 +246,8 @@ Get your free ngrok token at: https://dashboard.ngrok.com/get-started/your-autht
 Run the automated setup script:
 ```bash
 # On Windows CMD or PowerShell:
-cd "C:\Users\Owner\Trading AI Agent\ai-trading-agent"
-.\start_telegram_with_ngrok.bat
+cd telegram
+start_telegram_with_ngrok.bat
 
 # This will:
 # 1. Start the webhook server on port 8000
@@ -340,8 +340,7 @@ If the automated script doesn't work, you can start each component manually:
 
 **Terminal 1 - Webhook Server:**
 ```bash
-cd "C:\Users\Owner\Trading AI Agent\ai-trading-agent"
-python telegram_webhook_server.py
+python telegram/telegram_webhook_server.py
 ```
 
 **Terminal 2 - ngrok:**
@@ -351,20 +350,26 @@ C:\Users\Owner\ngrok\ngrok.exe http 8000
 
 **Terminal 3 - Configure Webhook:**
 ```bash
-cd "C:\Users\Owner\Trading AI Agent\ai-trading-agent"
-python setup_webhook_url.py
+python telegram/setup_webhook_url.py
 ```
 
-### Files Created
+### Files and Structure
 
-- `C:\Users\Owner\ngrok\ngrok.exe` - ngrok binary
-- `start_telegram_with_ngrok.bat` - Automated startup script
-- `setup_webhook_url.py` - Webhook configuration script
-- `telegram_webhook_server.py` - Webhook server
-- `TELEGRAM_SETUP_COMPLETE.md` - Complete documentation
-- `TELEGRAM_QUICK_START.md` - Quick reference guide
+All Telegram-related files are organized in the `telegram/` directory:
 
-See `TELEGRAM_SETUP_COMPLETE.md` for detailed documentation and troubleshooting.
+```
+telegram/
+├── README.md                           # Telegram integration documentation
+├── telegram_webhook_server.py          # Main webhook server
+├── setup_webhook_url.py                # Automatic webhook configuration
+├── setup_telegram_webhook.py           # Interactive setup helper
+├── start_telegram_with_ngrok.bat       # Automated startup script (Windows)
+├── telegram_requirements.txt           # Python dependencies
+├── TELEGRAM_SETUP_COMPLETE.md          # Complete setup guide
+└── TELEGRAM_QUICK_START.md             # Quick reference guide
+```
+
+See `telegram/README.md` for complete documentation and troubleshooting.
 
 ## NQ Dataset Audit
 Run a quick quality check on your NQ trades:

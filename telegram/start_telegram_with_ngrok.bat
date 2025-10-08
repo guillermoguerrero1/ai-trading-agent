@@ -12,7 +12,7 @@ start "ngrok" cmd /k "C:\Users\Owner\ngrok\ngrok.exe http 8000"
 timeout /t 8 /nobreak
 
 echo Step 3: Setting up webhook URL...
-python setup_webhook_url.py
+python "%~dp0setup_webhook_url.py"
 
 echo.
 echo ============================================

@@ -207,6 +207,38 @@ python scripts/direct_trade_entry.py
 # Follow prompts and enter custom timestamp when asked
 ```
 
+## Telegram Bot Trade Entry (NQ only)
+
+Send trade commands directly from Telegram:
+
+### Setup
+1) Create a bot with @BotFather → copy the token.
+2) Set env vars:
+```bash
+TELEGRAM_BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz
+TELEGRAM_ALLOWED_USER_IDS=123456789
+TELEGRAM_ENABLE=true
+TELEGRAM_WEBHOOK_URL=https://<your-domain-or-ngrok>/v1/hooks/telegram
+```
+
+### Usage
+Send messages to your bot:
+```
+trade NQZ5 buy 1 @ 17895 stop 17885 target 17915
+NQZ5 sell 2 @ 20450 stop 20460 target 20430 strat:ORB conf:0.8
+```
+
+### Webhook Management
+```bash
+# Set webhook URL
+make telegram-webhook
+
+# Remove webhook
+make telegram-webhook-delete
+```
+
+See `docs/TELEGRAM_SETUP.md` for complete setup guide.
+
 ## NQ Dataset Audit
 Run a quick quality check on your NQ trades:
 ```bash

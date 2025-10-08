@@ -2,7 +2,7 @@
 Prometheus metrics routes
 """
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Response, Depends
 from fastapi.responses import PlainTextResponse
 
 from app.services.metrics import get_metrics_service

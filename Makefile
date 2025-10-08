@@ -1,6 +1,6 @@
 # AI Trading Agent Makefile
 
-.PHONY: help install dev-install test lint format clean run-api run-ui run-dev run-prod run-docker build-docker dataset train cleanup-ports db-clean reset health routes open-trading test-order test-logs model-status migrate revision backtest full-check logs-api logs-ui smoke nq-backfill nq-dataset nq-train nq-all
+.PHONY: help install dev-install test lint format clean run-api run-ui run-dev run-prod run-docker build-docker dataset train cleanup-ports db-clean reset health routes open-trading test-order test-logs model-status migrate revision backtest full-check logs-api logs-ui smoke nq-backfill nq-dataset nq-train nq-all telegram-webhook telegram-webhook-delete
 
 # Default target
 help:
@@ -67,6 +67,10 @@ help:
 	@echo "Docker:"
 	@echo "  build-docker  Build Docker image"
 	@echo "  push-docker   Push Docker image"
+	@echo ""
+	@echo "Telegram Integration:"
+	@echo "  telegram-webhook       Set Telegram webhook URL (requires TELEGRAM_BOT_TOKEN and TELEGRAM_WEBHOOK_URL)"
+	@echo "  telegram-webhook-delete Remove Telegram webhook (requires TELEGRAM_BOT_TOKEN)"
 
 # Installation
 install:
@@ -594,3 +598,13 @@ trade-cli-timestamp:
 audit:
 	@python scripts/audit_nq_dataset.py
 	@ls -1t reports/audit/audit_*.md | head -n1 | xargs -I{} echo "📄 Latest report: {}"
+
+# Telegram webhook management
+telegram-webhook:
+	@if [ -z "$$TELEGRAM_BOT_TOKEN" ] || [ -z "$$TELEGRAM_WEBHOOK_URL" ]; then echo "Set TELEGRAM_BOT_TOKEN and TELEGRAM_WEBHOOK_URL"; exit 1; fi; \
+	curl -sS -X POST "https://api.telegram.org/bot$$TELEGRAM_BOT_TOKEN/setWebhook" \
+		-d "url=$$TELEGRAM_WEBHOOK_URL" | jq .
+
+telegram-webhook-delete:
+	@if [ -z "$$TELEGRAM_BOT_TOKEN" ]; then echo "Set TELEGRAM_BOT_TOKEN"; exit 1; fi; \
+	curl -sS -X POST "https://api.telegram.org/bot$$TELEGRAM_BOT_TOKEN/deleteWebhook" | jq .

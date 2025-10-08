@@ -59,6 +59,12 @@ class Settings(BaseSettings):
     DATA_BUFFER_SIZE: int = 1000
     MARKET_DATA_UPDATE_INTERVAL: float = 1.0
 
+    # Telegram Bot
+    TELEGRAM_BOT_TOKEN: str | None = None
+    TELEGRAM_ALLOWED_USER_IDS: str | None = None
+    TELEGRAM_ENABLE: bool = False
+    TELEGRAM_WEBHOOK_URL: str | None = None
+
     # Sessions: prefer SESSION_WINDOWS; fallback to start/end/days
     SESSION_WINDOWS: Optional[List[str]] = None
     SESSION_PROVIDER: str = "none"  # "cme" for CME provider, "none" for default
@@ -122,6 +128,13 @@ class Settings(BaseSettings):
     def max_daily_volume_usd(self) -> float:
         """Alias for MAX_DAILY_VOLUME_USD."""
         return self.MAX_DAILY_VOLUME_USD
+    
+    @property
+    def telegram_allowed_ids(self) -> set[int]:
+        """Parse TELEGRAM_ALLOWED_USER_IDS into a set of integers."""
+        if not self.TELEGRAM_ALLOWED_USER_IDS:
+            return set()
+        return {int(x.strip()) for x in self.TELEGRAM_ALLOWED_USER_IDS.split(",") if x.strip()}
 
 
 class BaseModelWithId(BaseModel):

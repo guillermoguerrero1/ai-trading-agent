@@ -145,6 +145,11 @@ def create_app() -> FastAPI:
     app.include_router(model.router, prefix="/v1", tags=["model"])
     app.include_router(metrics.router, prefix="/v1", tags=["metrics"])
     app.include_router(broker.router, prefix="/v1", tags=["broker"])
+    
+    # Conditional Telegram integration
+    if settings.TELEGRAM_ENABLE:
+        from app.routes import telegram
+        app.include_router(telegram.router, tags=["integrations", "telegram"])
     if HAS_TICK:
         app.include_router(tick.router, prefix="/v1", tags=["tick"])
 

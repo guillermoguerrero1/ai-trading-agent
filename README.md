@@ -209,35 +209,162 @@ python scripts/direct_trade_entry.py
 
 ## Telegram Bot Trade Entry (NQ only)
 
-Send trade commands directly from Telegram:
+Send trade commands directly from Telegram using a webhook-based bot.
 
-### Setup
-1) Create a bot with @BotFather → copy the token.
-2) Set env vars:
+### Quick Setup (Automated)
+
+**Prerequisites:**
+- Python 3.8+ installed
+- Telegram bot token from @BotFather
+- Your Telegram user ID from @userinfobot
+
+**1. Configure Bot Token**
+
+Add to your `.env` or `.env.dev` file:
 ```bash
-TELEGRAM_BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz
-TELEGRAM_ALLOWED_USER_IDS=123456789
+TELEGRAM_BOT_TOKEN=your_bot_token_here
+TELEGRAM_ALLOWED_USER_IDS=your_user_id_here
 TELEGRAM_ENABLE=true
-TELEGRAM_WEBHOOK_URL=https://<your-domain-or-ngrok>/v1/hooks/telegram
 ```
 
-### Usage
-Send messages to your bot:
+**2. Download and Configure ngrok**
+
+The system will automatically download ngrok for you:
+```bash
+python download_ngrok.py  # Auto-downloads to C:\Users\Owner\ngrok\
+```
+
+Then configure your ngrok auth token:
+```bash
+C:\Users\Owner\ngrok\ngrok.exe config add-authtoken YOUR_NGROK_TOKEN
+```
+
+Get your free ngrok token at: https://dashboard.ngrok.com/get-started/your-authtoken
+
+**3. Start Everything**
+
+Run the automated setup script:
+```bash
+# On Windows CMD or PowerShell:
+cd "C:\Users\Owner\Trading AI Agent\ai-trading-agent"
+.\start_telegram_with_ngrok.bat
+
+# This will:
+# 1. Start the webhook server on port 8000
+# 2. Start ngrok tunnel with public HTTPS URL
+# 3. Automatically configure Telegram webhook
+```
+
+Wait about 10 seconds for all services to start. You should see:
+- **Webhook Server window**: "Uvicorn running on http://0.0.0.0:8000"
+- **ngrok window**: "Forwarding https://xxxxx.ngrok.io -> http://localhost:8000"
+- **Setup output**: "Webhook set successfully!"
+
+**4. Test It**
+
+Send this message to your Telegram bot:
 ```
 trade NQZ5 buy 1 @ 17895 stop 17885 target 17915
-NQZ5 sell 2 @ 20450 stop 20460 target 20430 strat:ORB conf:0.8
 ```
 
+You should receive a confirmation reply from the bot!
+
+### Command Format
+
+```
+trade <SYMBOL> <buy/sell> <QUANTITY> @ <ENTRY> stop <STOP> target <TARGET>
+```
+
+**Examples:**
+```
+trade NQZ5 buy 1 @ 17895 stop 17885 target 17915
+NQZ5 sell 2 @ 20450 stop 20460 target 20430
+trade NQH6 buy 1 @ 18000 stop 17990 target 18020 strat:ORB conf:0.8
+```
+
+**Optional Parameters:**
+- `strat:ORB` - Strategy name
+- `conf:0.8` - Confidence level (0.0-1.0)
+
+### Important Notes
+
+- **ngrok Free Tier**: The URL changes each time you restart ngrok
+  - You'll need to re-run `start_telegram_with_ngrok.bat` after restarting
+- **Keep Windows Open**: Don't close the webhook server or ngrok windows
+- **Development Only**: This setup is for testing
+  - Production would use a static domain with SSL
+  - Consider ngrok paid plan or own server for production
+- **Security**: Only your whitelisted Telegram user ID can use the bot
+
 ### Webhook Management
+
 ```bash
-# Set webhook URL
+# Set webhook URL manually
 make telegram-webhook
 
 # Remove webhook
 make telegram-webhook-delete
 ```
 
-See `docs/TELEGRAM_SETUP.md` for complete setup guide.
+### Troubleshooting
+
+**Check if services are running:**
+```bash
+# Check webhook server
+netstat -ano | findstr :8000
+
+# Check ngrok
+tasklist | findstr ngrok
+```
+
+**View webhook status:**
+```bash
+curl https://api.telegram.org/bot<YOUR_TOKEN>/getWebhookInfo
+```
+
+**View ngrok dashboard:**
+Open in browser: `http://localhost:4040`
+
+**Kill processes if needed:**
+```bash
+# Kill webhook server (if port is stuck)
+taskkill /F /IM python.exe
+
+# Kill ngrok
+taskkill /F /IM ngrok.exe
+```
+
+### Manual Setup (Alternative)
+
+If the automated script doesn't work, you can start each component manually:
+
+**Terminal 1 - Webhook Server:**
+```bash
+cd "C:\Users\Owner\Trading AI Agent\ai-trading-agent"
+python telegram_webhook_server.py
+```
+
+**Terminal 2 - ngrok:**
+```bash
+C:\Users\Owner\ngrok\ngrok.exe http 8000
+```
+
+**Terminal 3 - Configure Webhook:**
+```bash
+cd "C:\Users\Owner\Trading AI Agent\ai-trading-agent"
+python setup_webhook_url.py
+```
+
+### Files Created
+
+- `C:\Users\Owner\ngrok\ngrok.exe` - ngrok binary
+- `start_telegram_with_ngrok.bat` - Automated startup script
+- `setup_webhook_url.py` - Webhook configuration script
+- `telegram_webhook_server.py` - Webhook server
+- `TELEGRAM_SETUP_COMPLETE.md` - Complete documentation
+- `TELEGRAM_QUICK_START.md` - Quick reference guide
+
+See `TELEGRAM_SETUP_COMPLETE.md` for detailed documentation and troubleshooting.
 
 ## NQ Dataset Audit
 Run a quick quality check on your NQ trades:

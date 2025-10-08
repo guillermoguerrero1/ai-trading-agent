@@ -138,20 +138,24 @@ async def send_telegram_reply(chat_id: int, text: str):
 
 async def submit_to_trading_api(payload: dict) -> Tuple[int, str]:
     """Submit trade to the main trading API."""
-    # For testing, we'll just log the trade instead of submitting to real API
-    print(f"Trade to submit: {payload}")
+    print(f"📤 Submitting trade to API: {payload}")
     
-    # In real implementation, you would POST to your trading API:
-    # async with httpx.AsyncClient(timeout=10) as client:
-    #     response = await client.post(
-    #         "http://localhost:9001/v1/orders",
-    #         headers={"Content-Type": "application/json", "Idempotency-Key": f"tg-{int(time.time())}-{uuid.uuid4().hex[:6]}"},
-    #         json=payload
-    #     )
-    #     return response.status_code, response.text
-    
-    # For demo, simulate success
-    return 200, "Trade logged successfully"
+    # POST to the trading API
+    async with httpx.AsyncClient(timeout=10) as client:
+        try:
+            response = await client.post(
+                "http://localhost:9001/v1/orders",
+                headers={
+                    "Content-Type": "application/json", 
+                    "Idempotency-Key": f"tg-{int(time.time())}-{uuid.uuid4().hex[:6]}"
+                },
+                json=payload
+            )
+            print(f"✅ API Response: {response.status_code}")
+            return response.status_code, response.text
+        except Exception as e:
+            print(f"❌ Error submitting to API: {e}")
+            return 500, str(e)
 
 @app.get("/")
 async def root():

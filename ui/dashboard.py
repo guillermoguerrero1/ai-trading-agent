@@ -469,11 +469,21 @@ def show_quick_trade():
     with col1:
         # Default to current UTC time
         default_time = datetime.now(timezone.utc)
-        entered_at = st.datetime_input(
-            "Entered at (UTC)", 
-            value=default_time,
-            help="When the trade was actually entered (for backfilling historical trades)"
+        # Use date and time inputs (Streamlit 1.50.0 compatible)
+        entry_date = st.date_input(
+            "Entry Date (UTC)",
+            value=default_time.date(),
+            help="Date when the trade was entered",
+            key="entry_date"
         )
+        entry_time = st.time_input(
+            "Entry Time (UTC)",
+            value=default_time.time(),
+            help="Time when the trade was entered",
+            key="entry_time"
+        )
+        # Combine date and time
+        entered_at = datetime.combine(entry_date, entry_time, tzinfo=timezone.utc)
     
     with col2:
         is_backfill = st.checkbox("Backfill", value=False, help="Mark this as a backfilled trade")
